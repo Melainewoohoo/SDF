@@ -1,4 +1,5 @@
-[
+{
+    "students":[
 {
     "Name": "Mely",
     "ID": 2600827,
@@ -8,10 +9,6 @@
     "Name": "Neo",
     "ID": 2612778,
     "password": "MoChiSian"
-},
-{
-    "Name": "John",
-    "ID": 1234,
-    "password": 1234
 }
 ]
+}
