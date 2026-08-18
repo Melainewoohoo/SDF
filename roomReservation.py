@@ -18,7 +18,23 @@ except json.JSONDecodeError:
 # id = temp_id
 # password = temp_password
 
+def base_layout():
+     global img
+     img = PhotoImage(file='login.png')
+     Label(window, image=img, bg='white').place(x=50, y=50)
+     
+     frame = Frame(window, width=350, height=350, bg="white")
+     frame.place(x=480, y=70)
+     
+     heading = Label(frame, text= "AMT Reservation System", fg="#57a1f8", 
+               bg="white", font=("Microsoft YaHei UI Light", 14, "bold"))
+     heading.place(x=85, y=5)
 
+     return frame
+
+def clear_window():
+     for widget in window.winfo_children():
+          widget.destroy()
 
 def verify_user(id, password):
    
@@ -29,22 +45,10 @@ def verify_user(id, password):
             return False, None      #No match found after checking all user
      
 def student_login():
-    window1 = Toplevel(window)
-    window1.geometry("925x500+300+200")
-    window1.configure(bg="#fff")
-    window1.title("Student Login")
-
+    clear_window()
+    window.title("Student Login")
 #-----------------------------------------Layout----------------------------------------
-    img = PhotoImage(file='login.png')
-    Label(window1, image=img, bg='white').place(x=50, y=50)
-
-    frame = Frame(window1, width=350, height=350, bg="white")
-    frame.place(x=480, y=70)
-
-    heading = Label(frame, text= "AMT Reservation System", fg="#57a1f8", 
-                    bg="white", font=("Microsoft YaHei UI Light", 14, "bold"))
-    heading.place(x=85, y=5)
-
+    frame = base_layout()
 #--------------------------------------Student Login------------------------------------
     student = Entry(frame, width=25, fg="black", border=0, bg="white",
                     font= ("Microsoft YaHei UI Light",11))
@@ -60,26 +64,14 @@ def student_login():
 
     Frame(frame, width=295, height=2, bg="black").place(x=25, y=177)
 
-    Button(window1, text="Login").pack()
-    Button(window1, text="Back", command=main_menu).pack()
+    Button(window, text="Login").place()
+    Button(window, text="Back", command=main_menu).place(x=35, y=187)
 
 def staff_login():
-    window2 = Toplevel(window)
-    window2.geometry("925x500+300+200")
-    window2.configure(bg="#fff")
-    window2.title("Staff Login")
-
+    clear_window()
+    window.title("Staff Login")
 #-----------------------------------------Layout----------------------------------------
-    img = PhotoImage(file='login.png')
-    Label(window2, image=img, bg='white').place(x=50, y=50)
-
-    frame = Frame(window2, width=350, height=350, bg="white")
-    frame.place(x=480, y=70)
-
-    heading = Label(frame, text= "AMT Reservation System", fg="#57a1f8", 
-                    bg="white", font=("Microsoft YaHei UI Light", 14, "bold"))
-    heading.place(x=85, y=5)
-
+    frame = base_layout()
 #--------------------------------------Staff Login--------------------------------------
     staff = Entry(frame, width=25, fg="black", border=0, bg="white",
                         font= ("Microsoft YaHei UI Light",11))
@@ -96,12 +88,8 @@ def staff_login():
     Frame(frame, width=295, height=2, bg="black").place(x=25, y=177)
 
 def booking_page():
-    window3 = Toplevel(window)
-    window3.geometry("925x500+300+200")
-    window3.configure(bg="#fff")
-    heading = Label(text= "AMT Reservation System", fg="#57a1f8", 
-                    bg="white", font=("Microsoft YaHei UI Light", 14, "bold"))
-    heading.place(x=50, y=70)
+    clear_window()
+    window.title("Facility Booking")
 
     booking_options = [
      "Discussion Room",
@@ -117,10 +105,10 @@ def booking_page():
     
     clicked = StringVar()
     clicked.set(booking_options[0])
-    drop = OptionMenu(window3, clicked, *booking_options)
+    drop = OptionMenu(window, clicked, *booking_options)
     drop.pack()
-    bookingButton = Button(window3, text="Show Selection").pack()
-    myLabel = Label(window3, text=clicked.get()).pack()
+    bookingButton = Button(window, text="Show Selection").pack()
+    myLabel = Label(window, text=clicked.get()).pack()
 
      
 
@@ -132,16 +120,7 @@ def main_menu():
     window.title("AMT Reservation System")
 
 #-----------------------------------------Layout----------------------------------------
-    img = PhotoImage(file='login.png')
-    Label(window, image=img, bg='white').place(x=50, y=50)
-
-    frame = Frame(window, width=350, height=350, bg="white")
-    frame.place(x=480, y=70)
-
-    heading = Label(frame, text= "AMT Reservation System", fg="#57a1f8", 
-                    bg="white", font=("Microsoft YaHei UI Light", 14, "bold"))
-    heading.place(x=85, y=5)
-
+    frame = base_layout()
 #------------------------------------------Button---------------------------------------
     studentLoginButton = Button(frame, text= "Student Login", command=student_login, 
                                 font=("Microsoft YaHei UI Light", 11))
