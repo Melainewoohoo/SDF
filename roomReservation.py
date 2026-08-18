@@ -88,12 +88,8 @@ def staff_login():
     Frame(frame, width=295, height=2, bg="black").place(x=25, y=177)
 
 def booking_page():
-    window3 = Toplevel(window)
-    window3.geometry("925x500+300+200")
-    window3.configure(bg="#fff")
-    heading = Label(text= "AMT Reservation System", fg="#57a1f8", 
-                    bg="white", font=("Microsoft YaHei UI Light", 14, "bold"))
-    heading.place(x=50, y=70)
+    clear_window()
+    window.title("Facility Booking")
 
     booking_options = [
      "Discussion Room",
@@ -109,10 +105,10 @@ def booking_page():
     
     clicked = StringVar()
     clicked.set(booking_options[0])
-    drop = OptionMenu(window3, clicked, *booking_options)
+    drop = OptionMenu(window, clicked, *booking_options)
     drop.pack()
-    bookingButton = Button(window3, text="Show Selection").pack()
-    myLabel = Label(window3, text=clicked.get()).pack()
+    bookingButton = Button(window, text="Show Selection").pack()
+    myLabel = Label(window, text=clicked.get()).pack()
 
      
 
