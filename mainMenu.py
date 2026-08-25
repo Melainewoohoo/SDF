@@ -2,6 +2,8 @@ import json
 import os
 from tkinter import *
 from tkinter import messagebox
+import facilityRM
+import facilityUM
 from roomReservation import *
 
 try:
@@ -160,9 +162,9 @@ def staff_menu(staff_data):
     Button(frame, text="Reserve Room", font=("Microsoft YaHei UI Light", 11),
            command=lambda: None).place(x=30, y=110)
     Button(frame, text="Facility Resource", font=("Microsoft YaHei UI Light", 11),
-           command=lambda: None).place(x=30, y=150)
+          command=lambda: facilityRM.facilityRM(window)).place(x=30, y=150)
     Button(frame, text="Facility Usage & Maintenance", font=("Microsoft YaHei UI Light", 11),
-           command=lambda: None).place(x=30, y=190)
+           command=lambda: facilityUM.facilityUM(window)).place(x=30, y=190)
 
     Button(frame, text="Logout", font=("Microsoft YaHei UI Light", 11),
            command=main_menu).place(x=30, y=230)
