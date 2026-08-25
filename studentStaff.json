@@ -15,5 +15,17 @@
     "ID": 2610161,
     "password": "AhXun1016"
 }
-]
+],
+    "staffs":[
+{
+    "Name":"MS.Nur Izzah",
+    "ID": 2606193,
+    "password": "NurIzzah"
+},
+{
+    "Name":"Mr.Goh",
+    "ID": 2601465,
+    "password": "MrGoh"
+}
+    ]
 }
