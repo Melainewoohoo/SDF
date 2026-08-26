@@ -1,25 +1,54 @@
-[
-  {
-    "type": "Usage Log",
-    "record_id": 3,
-    "facility_name": "\u8acb\u554f",
-    "facility_type": "11",
-    "date": "2001-11-11",
-    "remarks": "",
-    "user_name": "11",
-    "purpose": "111",
-    "duration_hours": 1.0
+{
+  "next_ids": {
+    "record": 11
   },
-  {
-    "type": "Maintenance",
-    "record_id": 4,
-    "facility_name": "\u6eab\u5e36\u5730\u5340",
-    "facility_type": "11",
-    "date": "2001-12-12",
-    "remarks": "",
-    "condition_status": "Fair",
-    "maintenance_status": "Completed",
-    "technician": "\u70ba",
-    "next_service_date": "2002-12-12"
-  }
-]
+  "records": [
+    {
+      "type": "Maintenance",
+      "record_id": 5,
+      "facility_name": "11",
+      "facility_type": "Classroom",
+      "date": "2012-12-12",
+      "remarks": "",
+      "condition": "Good",
+      "technician": "2",
+      "next_service": "2013-12-12",
+      "maintenance_status": "Not Required"
+    },
+    {
+      "type": "Maintenance",
+      "record_id": 7,
+      "facility_name": "21",
+      "facility_type": "Classroom",
+      "date": "2012-12-12",
+      "remarks": "",
+      "condition": "Good",
+      "technician": "2",
+      "next_service": "2013-12-12",
+      "maintenance_status": "Not Required"
+    },
+    {
+      "type": "Usage Log",
+      "record_id": 8,
+      "facility_name": "12",
+      "facility_type": "Classroom",
+      "date": "2012-12-12",
+      "remarks": "1",
+      "user_name": "12",
+      "purpose": "22",
+      "duration": 21.0
+    },
+    {
+      "type": "Maintenance",
+      "record_id": 10,
+      "facility_name": "nn",
+      "facility_type": "Lecture Hall",
+      "date": "2012-09-09",
+      "remarks": "",
+      "condition": "Poor",
+      "technician": "n",
+      "next_service": "2026-09-17",
+      "maintenance_status": "Completed"
+    }
+  ]
+}
