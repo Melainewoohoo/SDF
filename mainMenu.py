@@ -3,7 +3,7 @@ import os
 from tkinter import *
 from tkinter import messagebox
 import facilityRM
-import facilityUM
+import facility_usage_maintenance
 from roomReservation import *
 
 try:
@@ -21,7 +21,7 @@ except json.JSONDecodeError:
 
 def base_layout():
     global img
-    img = PhotoImage(file='login.png')
+    img = PhotoImage(file='login2.png')
     Label(window, image=img, bg='white').place(x=50, y=50)
 
     frame = Frame(window, width=350, height=350, bg="white")
@@ -42,6 +42,14 @@ def clear_window():
 def on_enter(e):
     # Clears the placeholder text in whichever Entry was just focused
     e.widget.delete(0, 'end')
+
+def open_facility_usage_maintenance(staff_data):
+    clear_window()
+    window.title("Facility Usage & Maintenance Management")
+    window.geometry("1280x650")
+
+    page = facility_usage_maintenance.FacilityUsageMaintenanceFrame(window, back_command=lambda: staff_menu(staff_data))
+    page.pack(fill="both", expand=True)
 
 
 # ---------------------------------------------------------------------
@@ -164,8 +172,7 @@ def staff_menu(staff_data):
     Button(frame, text="Facility Resource", font=("Microsoft YaHei UI Light", 11),
           command=lambda: facilityRM.facilityRM(window)).place(x=30, y=150)
     Button(frame, text="Facility Usage & Maintenance", font=("Microsoft YaHei UI Light", 11),
-           command=lambda: facilityUM.facilityUM(window)).place(x=30, y=190)
-
+          command=lambda: open_facility_usage_maintenance(staff_data)).place(x=30, y=190)
     Button(frame, text="Logout", font=("Microsoft YaHei UI Light", 11),
            command=main_menu).place(x=30, y=230)
 
