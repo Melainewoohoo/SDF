@@ -6,11 +6,6 @@ import facility_resource_management
 import facility_usage_maintenance
 from roomReservation import *
 
-window = Tk()
-window.geometry("925x500+300+200")
-window.configure(bg="#fff")
-window.title("AMT Reservation System")
-
 try:
     with open("studentStaff.json") as file:
         data = json.load(file)
@@ -24,63 +19,40 @@ except json.JSONDecodeError:
     data = {"students": [], "staffs": []}
 
 
-def base_layout(window):
-     global img
-     img = PhotoImage(file='login.png')
-     Label(window, image=img, bg='white').place(x=50, y=50)
+def base_layout():
+    global img
+    img = PhotoImage(file='login.png')
+    Label(window, image=img, bg='white').place(x=50, y=50)
 
-     frame = Frame(window, width=350, height=350, bg="white")
-     frame.place(x=480, y=70)
-     
-     heading = Label(frame, text= "AMT Reservation System", fg="#57a1f8", 
-               bg="white", font=("Microsoft YaHei UI Light", 14, "bold"))
-     heading.place(x=85, y=5)
+    frame = Frame(window, width=350, height=350, bg="white")
+    frame.place(x=480, y=70)
 
-     return frame
+    heading = Label(frame, text="AMT Reservation System", fg="#57a1f8",
+                     bg="white", font=("Microsoft YaHei UI Light", 14, "bold"))
+    heading.place(x=85, y=5)
+
+    return frame
 
 
-def clear_window(window):
-     for widget in window.winfo_children():
-          widget.destroy()
+def clear_window():
+    for widget in window.winfo_children():
+        widget.destroy()
 
 def on_enter(e):
+    # Clears the placeholder text in whichever Entry was just focused
     e.widget.delete(0, 'end')
 
-def verify_student(window):
-    student_id = student.get()
-    password = studPass.get()
-
-    for student_data in data["students"]:
-        if str(student_data["ID"]) == student_id and student_data["password"] == password:
-            messagebox.showinfo("Login Successful", "Welcome, {}! :D".format(student_data["Name"]))
-            student_menu(window, student_data)
-            return
-
-    messagebox.showerror("Login Failed", "Incorrect Student ID or Password.")
-
-
-def student_menu(window, student_data):
-    clear_window(window)
-    window.title("Student Menu")
-
-    frame = base_layout(window)
-    Label(frame, text="Welcome, {}".format(student_data["Name"]), fg="#57a1f8",
-          bg="white", font=("Microsoft YaHei UI Light", 12, "bold")).place(x=30, y=60)
-    Button(frame, text="Reserve Room", font=("Microsoft YaHei UI Light", 11),
-           command=lambda: None).place(x=30, y=110)
-    Button(frame, text="Logout", font=("Microsoft YaHei UI Light", 11),
-           command=lambda: main_menu(window)).place(x=30, y=150)
 
 # ---------------------------------------------------------------------
 # STUDENT LOGIN
 # ---------------------------------------------------------------------
-     
-def student_login(window):
+
+def student_login():
     global student, studPass
-    clear_window(window)
+    clear_window()
     window.title("Student Login")
 
-    frame = base_layout(window)
+    frame = base_layout()
 
     student = Entry(frame, width=25, fg="black", border=0, bg="white",
                      font=("Microsoft YaHei UI Light", 11))
@@ -98,17 +70,51 @@ def student_login(window):
 
     Frame(frame, width=295, height=2, bg="black").place(x=25, y=177)
 
-    Button(frame, text="Login", command=lambda: verify_student(window)).place(x=30, y=200)
-    
-    # Just close this Toplevel — the main menu window is already open behind it
-    Button(frame, text="Back", command=lambda: main_menu(window)).place(x=100, y=200)
+    Button(frame, text="Login", command=verify_student).place(x=30, y=200)
+    Button(frame, text="Back", command=main_menu).place(x=100, y=200)
 
-def staff_login(window):
+
+def verify_student():
+    student_id = student.get()
+    password = studPass.get()
+
+    for student_data in data["students"]:
+        if str(student_data["ID"]) == student_id and student_data["password"] == password:
+            messagebox.showinfo("Login Successful", "Welcome, {}! :D".format(student_data["Name"]))
+            student_menu(student_data)
+            return
+
+    messagebox.showerror("Login Failed", "Incorrect Student ID or Password.")
+
+
+def student_menu(student_data):
+    clear_window()
+    window.title("Student Menu")
+
+    frame = base_layout()
+
+    Label(frame, text="Welcome, {}".format(student_data["Name"]), fg="#57a1f8",
+          bg="white", font=("Microsoft YaHei UI Light", 12, "bold")).place(x=30, y=60)
+
+    Button(frame, text="Reserve Room", font=("Microsoft YaHei UI Light", 11),
+           command=lambda: booking_page(
+               window, student_data, lambda: student_menu(student_data)
+           )).place(x=30, y=110)
+
+    Button(frame, text="Logout", font=("Microsoft YaHei UI Light", 11),
+           command=main_menu).place(x=30, y=150)
+
+
+# ---------------------------------------------------------------------
+# STAFF LOGIN
+# ---------------------------------------------------------------------
+
+def staff_login():
     global staff, staffPass
-    clear_window(window)
+    clear_window()
     window.title("Staff Login")
 
-    frame = base_layout(window)
+    frame = base_layout()
 
     staff = Entry(frame, width=25, fg="black", border=0, bg="white",
                   font=("Microsoft YaHei UI Light", 11))
@@ -126,29 +132,28 @@ def staff_login(window):
 
     Frame(frame, width=295, height=2, bg="black").place(x=25, y=177)
 
-    Button(frame, text="Login", command=lambda: verify_staff(window)).place(x=30, y=200)
-    Button(frame, text="Back", command=lambda: main_menu(window)).place(x=100, y=200)
+    Button(frame, text="Login", command=verify_staff).place(x=30, y=200)
+    Button(frame, text="Back", command=main_menu).place(x=100, y=200)
 
 
-
-def verify_staff(window):
+def verify_staff():
     staff_id = staff.get()
     password = staffPass.get()
 
     for staff_data in data["staffs"]:
         if str(staff_data["ID"]) == staff_id and staff_data["password"] == password:
             messagebox.showinfo("Login Successful", "Welcome, {}! :D".format(staff_data["Name"]))
-            staff_menu(window, staff_data)
+            staff_menu(staff_data)
             return
 
     messagebox.showerror("Login Failed", "Incorrect Staff ID or Password.")
 
 
-def staff_menu(window, staff_data):
-    clear_window(window)
+def staff_menu(staff_data):
+    clear_window()
     window.title("Staff Menu")
 
-    frame = base_layout(window)
+    frame = base_layout()
 
     Label(frame, text="Welcome, {}".format(staff_data["Name"]), fg="#57a1f8",
           bg="white", font=("Microsoft YaHei UI Light", 12, "bold")).place(x=30, y=60)
@@ -161,29 +166,38 @@ def staff_menu(window, staff_data):
            command=lambda: facility_usage_maintenance.main(window)).place(x=30, y=190)
 
     Button(frame, text="Logout", font=("Microsoft YaHei UI Light", 11),
-           command=lambda: main_menu(window)).place(x=30, y=230)
+           command=main_menu).place(x=30, y=230)
 
 
 # ---------------------------------------------------------------------
 # MAIN MENU
 # ---------------------------------------------------------------------
 
-def main_menu(window):
+def main_menu():
     # NOTE: this no longer creates a new Tk() each time — it just clears
     # and rebuilds the ONE window created at the bottom of this file.
-    clear_window(window)
+    clear_window()
     window.title("AMT Reservation System")
 
-    frame = base_layout(window)
+    frame = base_layout()
 
-    studentLoginButton = Button(frame, text="Student Login", command=lambda:student_login(window),
-                                font=("Microsoft YaHei UI Light", 11))
+    studentLoginButton = Button(frame, text="Student Login", command=student_login,
+                                 font=("Microsoft YaHei UI Light", 11))
     studentLoginButton.place(x=30, y=80)
 
-    staffLoginButton = Button(frame, text="Staff Login", command=lambda:staff_login(window),
-                              font=("Microsoft YaHei UI Light", 11))
+    staffLoginButton = Button(frame, text="Staff Login", command=staff_login,
+                               font=("Microsoft YaHei UI Light", 11))
     staffLoginButton.place(x=30, y=150)
 
-main_menu(window)    
-window.mainloop()   
 
+# ---------------------------------------------------------------------
+# ENTRY POINT
+# ---------------------------------------------------------------------
+
+window = Tk()
+window.geometry("925x500+300+200")
+window.configure(bg="#fff")
+window.title("AMT Reservation System")
+
+main_menu()
+window.mainloop()
