@@ -4,6 +4,11 @@ from tkinter import *
 from tkinter import messagebox
 from roomReservation import *
 
+window = Tk()
+window.geometry("925x500+300+200")
+window.configure(bg="#fff")
+window.title("AMT Reservation System")
+
 try: 
     with open("studentStaff.json") as file:
         data = json.load(file)
@@ -14,11 +19,11 @@ except FileNotFoundError:
 except json.JSONDecodeError:
         print("Json file corrupted")
 
-def base_layout():
+def base_layout(window):
      global img
      img = PhotoImage(file='login.png')
      Label(window, image=img, bg='white').place(x=50, y=50)
-     
+
      frame = Frame(window, width=350, height=350, bg="white")
      frame.place(x=480, y=70)
      
@@ -28,14 +33,14 @@ def base_layout():
 
      return frame
 
-def clear_window():
+def clear_window(window):
      for widget in window.winfo_children():
           widget.destroy()
 
 def on_enter(e):
-     student.delete(0, 'end')
+    student.delete(0, 'end')
 
-def verify_student():
+def verify_student(window):
     student_id = student.get()
     password = studPass.get()
 
@@ -43,14 +48,17 @@ def verify_student():
      if (str(student_data["ID"])== student_id and student_data["password"] == password):
           messagebox.showinfo("Login Successful", f"Welcome, {student_data["Name"]}! :D")
 
+          booking_page(window)
           return
+    messagebox.showerror("L0gin Failed. Invalid ID or password :( )")
+    
      
-def student_login():
+def student_login(window):
     global student, studPass
-    clear_window()
+    clear_window(window)
     window.title("Student Login")
 
-    frame = base_layout()
+    frame = base_layout(window)
 
     student = Entry(frame, width=25, fg="black", border=0, bg="white",
                         font= ("Microsoft YaHei UI Light",11))
@@ -68,17 +76,16 @@ def student_login():
     
     Frame(frame, width=295, height=2, bg="black").place(x=25, y=177)
 
-    Button(window, text="Login", command=verify_student).place(x=35, y=187)
-    Button(window, text="Reserve Room").pack()
+    Button(window, text="Login", command=verify_student).place(x=25, y=197)
+    
     # Just close this Toplevel — the main menu window is already open behind it
-    Button(window, text="     Back   ", command=main_menu).place(x=45, y=197)
+    Button(window, text="     Back   ", command=lambda:main_menu(window)).place(x=45, y=207)
 
-
-def staff_login():
-    clear_window()
+def staff_login(window):
+    clear_window(window)
     window.title("Staff Login")
 
-    frame = base_layout()
+    frame = base_layout(window)
 
     staff = Entry(frame, width=25, fg="black", border=0, bg="white",
                             font= ("Microsoft YaHei UI Light",11))
@@ -97,26 +104,22 @@ def staff_login():
     Button(window, text="  Reserve Room  ").pack()
     Button(window, text="  Facility Resource  ").pack()
     Button(window, text="  Facility Usage & Maintenance  ").pack()
-    Button(window, text="  Back  ", command=main_menu).place()
+    Button(window, text="  Back  ", command=lambda:main_menu(window)).place()
 
 
-def main_menu():
-    global window   # keep img referenced globally so it isn't garbage-collected
-    window = Tk()
-    window.geometry("925x500+300+200")
-    window.configure(bg="#fff")
-    window.title("AMT Reservation System")
+def main_menu(window): 
+    clear_window(window)
 
-    frame = base_layout()
+    frame = base_layout(window)
 
-    studentLoginButton = Button(frame, text="Student Login", command=student_login,
+    studentLoginButton = Button(frame, text="Student Login", command=lambda:student_login(window),
                                 font=("Microsoft YaHei UI Light", 11))
     studentLoginButton.place(x=30, y=80)
 
-    staffLoginButton = Button(frame, text="Staff Login", command=staff_login,
+    staffLoginButton = Button(frame, text="Staff Login", command=lambda:staff_login(window),
                               font=("Microsoft YaHei UI Light", 11))
     staffLoginButton.place(x=30, y=150)
 
-    
-main_menu()
-window.mainloop()
+main_menu(window)    
+window.mainloop()   
+
