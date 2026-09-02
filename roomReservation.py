@@ -1,36 +1,9 @@
-import json
 import os
 from tkinter import *
 
-try: 
-    with open("studentStaff.json") as file:
-        data = json.load(file)
-              
-except FileNotFoundError:
-        print("File not found")
-        
-except json.JSONDecodeError:
-        print("Json file corrupted")
-
-# temp_id = list(data["ID"])
-# temp_password = list(data["password"])
-
-# id = temp_id
-# password = temp_password
-
-
-def verify_user(id, password):
-   
-    for student in data["students"]:
-            if student["ID"] == id and student["password"] == password:
-                return True, student["Name"]
-
-            return False, None      #No match found after checking all user
-     
-
 def booking_page(window):
     window.title("Facility Booking")
-
+    
     booking_options = [
      "Discussion Room",
      "Lecture Hall",

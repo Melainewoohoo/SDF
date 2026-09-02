@@ -38,7 +38,6 @@ def clear_window():
     for widget in window.winfo_children():
         widget.destroy()
 
-
 def on_enter(e):
     # Clears the placeholder text in whichever Entry was just focused
     e.widget.delete(0, 'end')
@@ -98,9 +97,9 @@ def student_menu(student_data):
           bg="white", font=("Microsoft YaHei UI Light", 12, "bold")).place(x=30, y=60)
 
     Button(frame, text="Reserve Room", font=("Microsoft YaHei UI Light", 11),
-           command=lambda: None).place(x=30, y=110)
-    # TODO: hook this up to whatever room-reservation window/function
-    # lives in roomReservation.py, e.g. command=lambda: open_reservation(student_data)
+           command=lambda: booking_page(
+               window, student_data, lambda: student_menu(student_data)
+           )).place(x=30, y=110)
 
     Button(frame, text="Logout", font=("Microsoft YaHei UI Light", 11),
            command=main_menu).place(x=30, y=150)
