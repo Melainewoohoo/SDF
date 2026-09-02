@@ -101,8 +101,13 @@ def student_menu(student_data):
                window, student_data, lambda: student_menu(student_data)
            )).place(x=30, y=110)
 
+    Button(frame, text="Booking History", font=("Microsoft YaHei UI Light", 11),
+           command=lambda: booking_history_page(
+               window, student_data, lambda: student_menu(student_data)
+           )).place(x=30, y=150)
+
     Button(frame, text="Logout", font=("Microsoft YaHei UI Light", 11),
-           command=main_menu).place(x=30, y=150)
+           command=main_menu).place(x=30, y=190)
 
 
 # ---------------------------------------------------------------------
