@@ -588,6 +588,15 @@ class FacilityResourceManagementFrame(ttk.Frame):
             )
 
     def create_widgets(self):
+        title_frame = ttk.Frame(self)
+        title_frame.pack(fill="x", pady=10)
+        if self.back_command:
+            tk.Button(
+                title_frame,
+                text="← Back",
+                font=("Microsoft YaHei UI Light", 10),
+                command=self.back_command
+        ).pack(side="left", padx=(5, 20))
         ttk.Label(
             self,
             text="Facility & Resource Management",
