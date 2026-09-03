@@ -1,0 +1,30 @@
+[
+    {
+        "room_id": "DR001",
+        "room_name": "Discussion Room 1",
+        "room_type": "Discussion Room",
+        "capacity": 6,
+        "status": "Available"
+    },
+    {
+        "room_id": "DR002",
+        "room_name": "Discussion Room 2",
+        "room_type": "Discussion Room",
+        "capacity": 6,
+        "status": "Available"
+    },
+    {
+        "room_id": "LH001",
+        "room_name": "Lecture Hall",
+        "room_type": "Lecture Hall",
+        "capacity": 100,
+        "status": "Available"
+    },
+    {
+        "room_id": "CL001",
+        "room_name": "Computer Laboratory",
+        "room_type": "Computer Laboratory",
+        "capacity": 30,
+        "status": "Available"
+    }
+]

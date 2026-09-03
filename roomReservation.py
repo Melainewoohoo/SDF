@@ -6,6 +6,7 @@ from tkinter import (Button, Checkbutton, Entry, Frame, IntVar, Label, Listbox,
 
 
 RESERVATION_FILE = "room_reservations.json"
+ROOM_FILE = "rooms.json"
 ROOMS = ["Discussion Room 1", "Discussion Room 2", "Lecture Hall", "Computer Laboratory"]
 
 # Fixed weekly schedule for every room.
@@ -34,6 +35,15 @@ ROOM_SCHEDULE = {
         ("Thursday", "14:00", "16:00"),
     ],
 }
+
+# A newly added room uses these fixed slots until its own schedule is added.
+DEFAULT_ROOM_SCHEDULE = [
+    ("Monday", "09:00", "10:00"),
+    ("Tuesday", "11:00", "12:00"),
+    ("Wednesday", "14:00", "15:00"),
+    ("Thursday", "10:00", "11:00"),
+    ("Friday", "15:00", "16:00"),
+]
 
 TERMS_TEXT = """Terms of use:
 
@@ -68,6 +78,25 @@ def _save_reservations(reservations):
         json.dump(reservations, file, indent=4)
 
 
+def load_available_rooms():
+    # Read the rooms created by staff in the Manage Room page.
+    if not os.path.exists(ROOM_FILE):
+        return ROOMS
+
+    try:
+        with open(ROOM_FILE, "r", encoding="utf-8") as file:
+            room_records = json.load(file)
+    except (OSError, json.JSONDecodeError):
+        return ROOMS
+
+    available_rooms = []
+    for room in room_records:
+        if room.get("status") == "Available":
+            available_rooms.append(room.get("room_name"))
+
+    return available_rooms
+
+
 def booking_page(window, student_data, back_command):
     # Display the student reservation page.
     for widget in window.winfo_children():
@@ -92,7 +121,11 @@ def booking_page(window, student_data, back_command):
         booking_date = date.today() + timedelta(days=offset)
         available_dates.append(booking_date.strftime("%Y-%m-%d"))
 
-    room_var = StringVar(window, value=ROOMS[0])
+    booking_rooms = load_available_rooms()
+    if len(booking_rooms) == 0:
+        booking_rooms = ["No rooms available"]
+
+    room_var = StringVar(window, value=booking_rooms[0])
     date_var = StringVar(window, value="All Dates")
     pax_var = StringVar(window, value="1")
     agreed_var = IntVar(window, value=0)
@@ -100,7 +133,7 @@ def booking_page(window, student_data, back_command):
 
     Label(form, text="Room", bg="#f7f9fc",
           font=("Microsoft YaHei UI Light", 10, "bold")).place(x=15, y=15)
-    OptionMenu(form, room_var, *ROOMS).place(x=70, y=10, width=205)
+    OptionMenu(form, room_var, *booking_rooms).place(x=70, y=10, width=205)
 
     Label(form, text="Date", bg="#f7f9fc",
           font=("Microsoft YaHei UI Light", 10, "bold")).place(x=15, y=50)
@@ -166,12 +199,21 @@ def booking_page(window, student_data, back_command):
         selected_date = date_var.get()
         reservations = _load_reservations()
 
+        if selected_room == "No rooms available":
+            available_list.insert(END, "No rooms are currently available.")
+            return
+
+        if selected_room in ROOM_SCHEDULE:
+            selected_schedule = ROOM_SCHEDULE[selected_room]
+        else:
+            selected_schedule = DEFAULT_ROOM_SCHEDULE
+
         for booking_date in available_dates:
             if selected_date != "All Dates" and selected_date != booking_date:
                 continue
 
             day_name = date.fromisoformat(booking_date).strftime("%A")
-            for schedule in ROOM_SCHEDULE[selected_room]:
+            for schedule in selected_schedule:
                 schedule_day = schedule[0]
                 start_time = schedule[1]
                 end_time = schedule[2]
@@ -195,7 +237,9 @@ def booking_page(window, student_data, back_command):
 
     def submit_reservation():
         selected = available_list.curselection()
-        if not selected or available_list.get(selected[0]).startswith("No available"):
+        if (not selected
+                or available_list.get(selected[0]).startswith("No available")
+                or available_list.get(selected[0]).startswith("No rooms")):
             messagebox.showerror("No Selection", "Please select an available date and time.")
             return
 
