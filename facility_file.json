@@ -1,0 +1,66 @@
+{
+  "Facilities": [
+    {
+      "id": "DR1001",
+      "name": "Room A1001",
+      "type": "Discussion Room",
+      "location": "Block A, Level 1",
+      "capacity": "4",
+      "status": "Available",
+      "condition": "Good"
+    },
+    {
+     "id": "DR1002",
+      "name": "Room A1002",
+      "type": "Discussion Room",
+      "location": "Block A, Level 1",
+      "capacity": "4",
+      "status": "Fair",
+      "condition": "Good"
+    },
+    {
+      "id": "DR2001",
+      "name": "Room A2001",
+      "type": "Discussion Room",
+      "location": "Block A, Level 1",
+      "capacity": "6",
+      "status": "Available",
+      "condition": "Poor"
+    },
+    {
+      "id": "CL1001",
+      "name": "Lab L1001",
+      "type": "Computer Lab",
+      "location": "Block B, Level 1",
+      "capacity": "40",
+      "status": "Unavailable",
+      "condition": "Good"
+    },
+    {"id": "CL1002",
+      "name": "Lab L1002",
+      "type": "Computer Lab",
+      "location": "Block B, Level 1",
+      "capacity": "40",
+      "status": "Available",
+      "condition": "Good"
+    },
+    {
+      "id": "LH1001",
+      "name": "DK4",
+      "type": "Lecture Hall",
+      "location": "Block C, Level 1",
+      "capacity": "50",
+      "status": "Available",
+      "condition": "Good"
+    },
+    {
+      "id": "LH1002",
+      "name": "DK5",
+      "type": "Lecture Hall",
+      "location": "Block C, Level 1",
+      "capacity": "6",
+      "status": "Available",
+      "condition": "Good"
+    }
+  ]
+}
