@@ -98,7 +98,7 @@ def verify_student():
 def student_menu(student_data):
     clear_window()
     window.title("Student Menu")
-
+    window.geometry("925x500+300+200")
     frame = base_layout()
 
     Label(frame, text="Welcome, {}".format(student_data["Name"]), fg="#57a1f8",
@@ -165,6 +165,7 @@ def verify_staff():
 def staff_menu(staff_data):
     clear_window()
     window.title("Staff Menu")
+    window.geometry("925x500+300+200")
 
     frame = base_layout()
 
@@ -190,7 +191,7 @@ def main_menu():
     # and rebuilds the ONE window created at the bottom of this file.
     clear_window()
     window.title("AMT Reservation System")
-
+    window.geometry("925x500+300+200")
     frame = base_layout()
 
     studentLoginButton = Button(frame, text="Student Login", command=student_login,
