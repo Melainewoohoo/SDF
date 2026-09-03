@@ -1,6 +1,6 @@
 {
   "next_ids": {
-    "record": 2
+    "record": 3
   },
   "records": [
     {
@@ -13,6 +13,18 @@
       "status": "Active",
       "remarks": "",
       "location": "near DK3",
+      "capacity": 50
+    },
+    {
+      "type": "Facility",
+      "record_id": 2,
+      "resource_name": "DK3",
+      "resource_type": "Lecture Hall",
+      "date_added": "2026-08-31",
+      "condition": "Good",
+      "status": "Active",
+      "remarks": "",
+      "location": "near DK4",
       "capacity": 50
     }
   ]
