@@ -648,7 +648,10 @@ class FacilityManager:
 # ============================================================
 class FacilityUsageMaintenanceFrame(ttk.Frame):
 
-    def __init__(self, parent):
+    def __init__(self, parent, back_command=None):
+        super().__init__(parent, padding=10)
+
+        self.back_command = back_command
         super().__init__(parent, padding=10)
 
         self.manager = FacilityManager()
@@ -675,15 +678,30 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
             )
 
     def create_widgets(self):
-        ttk.Label(
-            self,
+        # Title row
+        title_frame = ttk.Frame(self)
+        title_frame.pack(fill="x", pady=10)
+
+        if self.back_command:
+            tk.Button(
+                title_frame,
+                text="← Back",
+                font=("Microsoft YaHei UI Light", 10),
+                command=self.back_command
+            ).pack(side="left", padx=(5, 20))
+
+        tk.Label(
+            title_frame,
             text="Facility Usage & Maintenance Management",
-            font=("Arial", 16, "bold")
-        ).pack(pady=10)
+            fg="#57a1f8",
+            bg="white",
+            font=("Microsoft YaHei UI Light", 14, "bold")
+        ).pack(side="left")
 
         # Main buttons
         button_frame = ttk.Frame(self)
         button_frame.pack(fill="x", pady=5)
+        
 
         buttons = [
             ("Add Usage", self.add_usage_form),
