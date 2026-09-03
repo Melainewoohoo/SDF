@@ -1,6 +1,6 @@
 {
   "next_ids": {
-    "record": 2
+    "record": 4
   },
   "records": [
     {
@@ -14,6 +14,30 @@
       "remarks": "",
       "location": "near DK3",
       "capacity": 50
+    },
+    {
+      "type": "Facility",
+      "record_id": 2,
+      "resource_name": "Q105",
+      "resource_type": "Classroom",
+      "date_added": "2026-09-04",
+      "condition": "Good",
+      "status": "Active",
+      "remarks": "",
+      "location": "Block Q",
+      "capacity": 30
+    },
+    {
+      "type": "Facility",
+      "record_id": 3,
+      "resource_name": "B101",
+      "resource_type": "Lab",
+      "date_added": "2026-09-03",
+      "condition": "Good",
+      "status": "Active",
+      "remarks": "",
+      "location": "Block B",
+      "capacity": 30
     }
   ]
 }
