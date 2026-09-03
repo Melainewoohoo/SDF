@@ -1,6 +1,6 @@
 {
   "next_ids": {
-    "record": 31
+    "record": 33
   },
   "records": [
     {
@@ -12,7 +12,7 @@
       "remarks": "Morning class",
       "user_name": "Alice",
       "purpose": "Programming class",
-      "duration": 2
+      "duration": 2.0
     },
     {
       "type": "Maintenance",
@@ -35,7 +35,7 @@
       "remarks": "",
       "user_name": "Daniel",
       "purpose": "Basketball training",
-      "duration": 3
+      "duration": 3.0
     },
     {
       "type": "Maintenance",
@@ -104,7 +104,7 @@
       "remarks": "",
       "user_name": "Sophia",
       "purpose": "Seminar",
-      "duration": 2
+      "duration": 2.0
     },
     {
       "type": "Maintenance",
@@ -127,7 +127,7 @@
       "remarks": "",
       "user_name": "Ryan",
       "purpose": "Badminton training",
-      "duration": 2
+      "duration": 2.0
     },
     {
       "type": "Maintenance",
@@ -150,7 +150,7 @@
       "remarks": "",
       "user_name": "Olivia",
       "purpose": "Database lab",
-      "duration": 2
+      "duration": 2.0
     },
     {
       "type": "Maintenance",
@@ -173,7 +173,7 @@
       "remarks": "",
       "user_name": "Grace",
       "purpose": "Group discussion",
-      "duration": 1
+      "duration": 1.0
     },
     {
       "type": "Maintenance",
@@ -196,7 +196,7 @@
       "remarks": "",
       "user_name": "Chloe",
       "purpose": "Guest lecture",
-      "duration": 3
+      "duration": 3.0
     },
     {
       "type": "Maintenance",
@@ -242,7 +242,7 @@
       "remarks": "",
       "user_name": "Mia",
       "purpose": "Lecture",
-      "duration": 2
+      "duration": 2.0
     },
     {
       "type": "Maintenance",
@@ -265,7 +265,7 @@
       "remarks": "",
       "user_name": "Noah",
       "purpose": "Sports event",
-      "duration": 4
+      "duration": 4.0
     },
     {
       "type": "Maintenance",
@@ -288,7 +288,7 @@
       "remarks": "",
       "user_name": "Ava",
       "purpose": "Swimming training",
-      "duration": 2
+      "duration": 2.0
     },
     {
       "type": "Maintenance",
@@ -311,7 +311,7 @@
       "remarks": "",
       "user_name": "Liam",
       "purpose": "Volleyball practice",
-      "duration": 2
+      "duration": 2.0
     },
     {
       "type": "Maintenance",
@@ -334,7 +334,7 @@
       "remarks": "",
       "user_name": "Emma",
       "purpose": "Workshop",
-      "duration": 3
+      "duration": 3.0
     },
     {
       "type": "Maintenance",
@@ -347,6 +347,29 @@
       "technician": "James",
       "next_service": "2026-10-25",
       "maintenance_status": "Not Required"
+    },
+    {
+      "type": "Usage Log",
+      "record_id": 31,
+      "facility_name": "DK4",
+      "facility_type": "Lecture Hall",
+      "date": "2026-09-01",
+      "remarks": "use for preparing presentation",
+      "user_name": "jianxun",
+      "purpose": "idk",
+      "duration": 2.0
+    },
+    {
+      "type": "Maintenance",
+      "record_id": 32,
+      "facility_name": "DK4",
+      "facility_type": "Lecture Hall",
+      "date": "2026-09-02",
+      "remarks": "havent complete repair",
+      "condition": "Under Repair",
+      "technician": "Mel",
+      "next_service": "2026-09-03",
+      "maintenance_status": "Overdue"
     }
   ]
 }
