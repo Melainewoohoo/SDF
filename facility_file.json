@@ -1,6 +1,6 @@
 {
   "next_ids": {
-    "record": 5
+    "record": 6
   },
   "records": [
     {
@@ -38,6 +38,18 @@
       "remarks": "",
       "location": "Bukit Bintang",
       "capacity": 10
+    },
+    {
+      "type": "Facility",
+      "record_id": 5,
+      "resource_name": "B101",
+      "resource_type": "Lab",
+      "date_added": "2026-09-01",
+      "condition": "Good",
+      "status": "Retired",
+      "remarks": "",
+      "location": "Block B",
+      "capacity": 30
     }
   ]
 }
