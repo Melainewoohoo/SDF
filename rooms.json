@@ -26,5 +26,12 @@
         "room_type": "Computer Laboratory",
         "capacity": 30,
         "status": "Available"
+    },
+    {
+        "room_id": "FAC002",
+        "room_name": "DK3",
+        "room_type": "Lecture Hall",
+        "capacity": 50,
+        "status": "Maintenance"
     }
 ]
