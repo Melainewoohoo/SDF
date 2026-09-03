@@ -2,7 +2,7 @@ import json
 import os
 from tkinter import *
 from tkinter import messagebox
-import facilityRM
+import facility_resource_management
 import facility_usage_maintenance
 from roomReservation import *
 
@@ -37,7 +37,6 @@ def base_layout():
 def clear_window():
     for widget in window.winfo_children():
         widget.destroy()
-
 
 def on_enter(e):
     # Clears the placeholder text in whichever Entry was just focused
@@ -106,12 +105,17 @@ def student_menu(student_data):
           bg="white", font=("Microsoft YaHei UI Light", 12, "bold")).place(x=30, y=60)
 
     Button(frame, text="Reserve Room", font=("Microsoft YaHei UI Light", 11),
-           command=lambda: None).place(x=30, y=110)
-    # TODO: hook this up to whatever room-reservation window/function
-    # lives in roomReservation.py, e.g. command=lambda: open_reservation(student_data)
+           command=lambda: booking_page(
+               window, student_data, lambda: student_menu(student_data)
+           )).place(x=30, y=110)
+
+    Button(frame, text="Booking History", font=("Microsoft YaHei UI Light", 11),
+           command=lambda: booking_history_page(
+               window, student_data, lambda: student_menu(student_data)
+           )).place(x=30, y=150)
 
     Button(frame, text="Logout", font=("Microsoft YaHei UI Light", 11),
-           command=main_menu).place(x=30, y=150)
+           command=main_menu).place(x=30, y=190)
 
 
 # ---------------------------------------------------------------------
@@ -170,7 +174,7 @@ def staff_menu(staff_data):
     Button(frame, text="Reserve Room", font=("Microsoft YaHei UI Light", 11),
            command=lambda: None).place(x=30, y=110)
     Button(frame, text="Facility Resource", font=("Microsoft YaHei UI Light", 11),
-          command=lambda: facilityRM.facilityRM(window)).place(x=30, y=150)
+          command=lambda: facility_resource_management.FacilityResourceManagementFrame(window)).place(x=30, y=150)
     Button(frame, text="Facility Usage & Maintenance", font=("Microsoft YaHei UI Light", 11),
           command=lambda: open_facility_usage_maintenance(staff_data)).place(x=30, y=190)
     Button(frame, text="Logout", font=("Microsoft YaHei UI Light", 11),
