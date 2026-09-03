@@ -9,6 +9,7 @@ from tkinter import ttk, messagebox, filedialog
 
 APP_FOLDER = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(APP_FOLDER, "facility_records.json")
+FACILITY_FILE = os.path.join(APP_FOLDER, "facility_file.json")
 
 CONDITIONS = ("Good", "Fair", "Poor", "Under Repair")
 MAINTENANCE_STATUS = ("Not Required", "Scheduled", "Completed", "Overdue")
@@ -34,6 +35,72 @@ def validate_date(value, field_name="Date"):
 
 class InvalidRecordError(Exception):
     pass
+
+def load_shared_facilities(usage_only=False):
+    """Load facilities from the shared facility_file.json."""
+    if not os.path.exists(FACILITY_FILE):
+        raise InvalidRecordError(
+            "Shared facility file (facility_file.json) was not found."
+        )
+
+    try:
+        with open(FACILITY_FILE, "r", encoding="utf-8") as file:
+            data = json.load(file)
+
+    except OSError:
+        raise InvalidRecordError(
+            "Cannot open the shared facility file."
+        )
+
+    except json.JSONDecodeError:
+        raise InvalidRecordError(
+            "The shared facility file contains invalid JSON."
+        )
+
+    if (
+        not isinstance(data, dict)
+        or not isinstance(data.get("records"), list)
+    ):
+        raise InvalidRecordError(
+            "The shared facility file has an unsupported structure."
+        )
+
+    facilities = []
+
+    for item in data["records"]:
+
+        if not isinstance(item, dict):
+            continue
+
+        if item.get("type") != "Facility":
+            continue
+
+        name = str(
+            item.get("resource_name", "")
+        ).strip()
+
+        facility_type = str(
+            item.get("resource_type", "")
+        ).strip()
+
+        status = str(
+            item.get("status", "")
+        ).strip().title()
+
+        if name == "" or facility_type == "":
+            continue
+
+        # Usage only allows Active facilities
+        if usage_only and status != "Active":
+            continue
+
+        # Maintenance does not allow retired facilities
+        if not usage_only and status == "Retired":
+            continue
+
+        facilities.append(item)
+
+    return facilities
 
 # ============================================================
 # Parent Class
@@ -491,7 +558,6 @@ class FacilityManager:
             with open(path, "w", newline="", encoding="utf-8") as file:
                 writer = csv.writer(file)
 
-                # Export each record field into a separate CSV column.
                 writer.writerow([
                     "ID", "Type", "Facility", "Facility Type", "Date",
                     "User/Technician", "Purpose", "Duration (hours)",
@@ -566,7 +632,6 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
             )
 
     def create_widgets(self):
-        # Title row
         title_frame = ttk.Frame(self)
         title_frame.pack(fill="x", pady=10)
 
@@ -586,11 +651,9 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
             font=("Microsoft YaHei UI Light", 14, "bold")
         ).pack(side="top")
 
-        # Main buttons
         button_frame = ttk.Frame(self)
         button_frame.pack(fill="x", pady=5)
         
-
         buttons = [
             ("Add Usage", self.add_usage_form),
             ("Add Maintenance", self.add_maintenance_form),
@@ -605,7 +668,6 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
                 command=command
             ).pack(side="left", padx=3)
 
-        # Search
         search_frame = ttk.Frame(self)
         search_frame.pack(fill="x", pady=8)
 
@@ -649,7 +711,6 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
             command=self.refresh_table
         ).pack(side="left", padx=3)
 
-        # Record table
         columns = (
             "id", "type", "facility", "facility_type", "date",
             "person", "detail", "condition", "status"
@@ -686,7 +747,6 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
                 width=130
             )
 
-        # Vertical scrollbar
         scrollbar = ttk.Scrollbar(
             table_frame,
             orient="vertical",
@@ -713,7 +773,6 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
             self.select_record
         )
         
-        # Details
         detail_box = ttk.LabelFrame(self, text="Selected Record")
         detail_box.pack(fill="x", pady=8)
 
@@ -1046,26 +1105,67 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
     # Add Forms
     # ------------------------------------------------------------
     def add_usage_form(self):
+        try:
+            facilities = load_shared_facilities(
+                usage_only=True
+            )
+
+        except InvalidRecordError as error:
+            messagebox.showerror(
+                "Facility File Error",
+                str(error)
+            )
+            return
+
+        if not facilities:
+            messagebox.showwarning(
+                "No Active Facility",
+                "No active facility is available."
+            )
+            return
+
         self.create_form(
             "Add Usage Log",
             [
                 ("Facility Name", None),
-                ("Facility Type", FACILITY_TYPES),
+                ("Facility Type", None),
                 ("Date (YYYY-MM-DD)", None),
                 ("User Name", None),
                 ("Purpose", None),
                 ("Duration (hours)", None),
                 ("Remarks", None)
             ],
-            self.manager.add_usage
+            self.manager.add_usage,
+            shared_facilities=facilities
         )
 
+
     def add_maintenance_form(self):
+
+        try:
+            facilities = load_shared_facilities(
+                usage_only=False
+            )
+
+        except InvalidRecordError as error:
+            messagebox.showerror(
+                "Facility File Error",
+                str(error)
+            )
+            return
+
+        if not facilities:
+            messagebox.showwarning(
+                "No Facility",
+                "No facility is available for maintenance."
+            )
+            return
+
         self.create_form(
             "Add Maintenance Record",
             [
                 ("Facility Name", None),
-                ("Facility Type", FACILITY_TYPES),
+                ("Facility Type", None),
                 ("Date (YYYY-MM-DD)", None),
                 ("Condition", CONDITIONS),
                 ("Technician", None),
@@ -1073,30 +1173,87 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
                 ("Maintenance Status", MAINTENANCE_STATUS),
                 ("Remarks", None)
             ],
-            self.manager.add_maintenance
+            self.manager.add_maintenance,
+            shared_facilities=facilities
         )
 
-    def create_form(self, title, fields, save_function):
+    def create_form(
+        self,
+        title,
+        fields,
+        save_function,
+        shared_facilities=None
+    ):
         window = tk.Toplevel(self)
         window.title(title)
 
         variables = []
         widgets = []
+
+        facility_lookup = {}
+
+        if shared_facilities is not None:
+            facility_lookup = {
+                item["resource_name"]: item
+                for item in shared_facilities
+                if item.get("resource_name")
+            }
+
         for row, (label_text, choices) in enumerate(fields):
+
             ttk.Label(
                 window,
                 text=label_text
-            ).grid(row=row, column=0, padx=10, pady=5, sticky="w")
+            ).grid(
+                row=row,
+                column=0,
+                padx=10,
+                pady=5,
+                sticky="w"
+            )
 
             variable = tk.StringVar()
 
-            if choices is None:
+            # Facility Name
+            if shared_facilities is not None and row == 0:
+
+                facility_names = tuple(
+                    facility_lookup.keys()
+                )
+
+                widget = ttk.Combobox(
+                    window,
+                    textvariable=variable,
+                    values=facility_names,
+                    state="readonly",
+                    width=25
+                )
+
+                if facility_names:
+                    variable.set(
+                        facility_names[0]
+                    )
+
+            # Facility Type - automatically filled
+            elif shared_facilities is not None and row == 1:
+
+                widget = ttk.Entry(
+                    window,
+                    textvariable=variable,
+                    state="readonly",
+                    width=28
+                )
+
+            elif choices is None:
+
                 widget = ttk.Entry(
                     window,
                     textvariable=variable,
                     width=28
                 )
+
             else:
+
                 widget = ttk.Combobox(
                     window,
                     textvariable=variable,
@@ -1106,17 +1263,55 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
                 )
 
                 if len(choices) > 0:
-                    variable.set(choices[0])
+                    variable.set(
+                        choices[0]
+                    )
 
-            widget.grid(row=row, column=1, padx=10, pady=5)
+            widget.grid(
+                row=row,
+                column=1,
+                padx=10,
+                pady=5
+            )
+
             variables.append(variable)
             widgets.append(widget)
+
+        if shared_facilities is not None and facility_lookup:
+
+            def sync_facility_type(event=None):
+
+                selected = facility_lookup.get(
+                    variables[0].get()
+                )
+
+                if selected is None:
+                    variables[1].set("")
+                    return
+
+                variables[1].set(
+                    str(
+                        selected.get(
+                            "resource_type",
+                            ""
+                        )
+                    ).strip()
+                )
+
+            widgets[0].bind(
+                "<<ComboboxSelected>>",
+                sync_facility_type
+            )
+
+            sync_facility_type()
 
         def save():
             values = []
 
             for variable in variables:
-                values.append(variable.get())
+                values.append(
+                    variable.get()
+                )
 
             try:
                 save_function(values)
@@ -1130,18 +1325,23 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
                 )
 
             except InvalidRecordError as error:
+
                 messagebox.showerror(
                     "Invalid Input",
                     str(error)
                 )
 
-                error_message = str(error).lower()
+                error_message = str(
+                    error
+                ).lower()
 
-                # Find which input is wrong
                 if "facility name" in error_message:
                     wrong_index = 0
 
-                elif "date" in error_message and "next service" not in error_message:
+                elif (
+                    "date" in error_message
+                    and "next service" not in error_message
+                ):
                     wrong_index = 2
 
                 elif "user name" in error_message:
@@ -1171,14 +1371,21 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
                 else:
                     wrong_index = 0
 
-                # Return cursor to wrong input
-                widgets[wrong_index].focus_set()
+                widgets[
+                    wrong_index
+                ].focus_set()
 
-                # Highlight existing wrong value
-                if isinstance(widgets[wrong_index], ttk.Entry):
-                    widgets[wrong_index].selection_range(0, tk.END)
+                if isinstance(
+                    widgets[wrong_index],
+                    ttk.Entry
+                ):
+                    widgets[
+                        wrong_index
+                    ].selection_range(
+                        0,
+                        tk.END
+                    )
 
-        # Press Enter = Save
         window.bind(
             "<Return>",
             lambda event: save()
@@ -1194,7 +1401,6 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
             columnspan=2,
             pady=10
         )
-
     # ------------------------------------------------------------
     # Update / Delete
     # ------------------------------------------------------------
@@ -1340,7 +1546,6 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
                 if isinstance(widgets[wrong_index], ttk.Entry):
                     widgets[wrong_index].selection_range(0, tk.END)
 
-        # Press Enter = Save
         window.bind(
             "<Return>",
             lambda event: save_changes()
