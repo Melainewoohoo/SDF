@@ -8,7 +8,7 @@ from tkinter import ttk, messagebox, filedialog
 
 
 APP_FOLDER = os.path.dirname(os.path.abspath(__file__))
-DATA_FILE = os.path.join(APP_FOLDER, "resource_records.json")
+DATA_FILE = os.path.join(APP_FOLDER, "facility_file.json")
 
 CONDITIONS = ("Good", "Fair", "Poor", "Under Repair")
 STATUSES = ("Active", "Inactive", "Retired")
