@@ -1,6 +1,6 @@
 {
   "next_ids": {
-    "record": 33
+    "record": 35
   },
   "records": [
     {
@@ -370,6 +370,29 @@
       "technician": "Mel",
       "next_service": "2026-09-03",
       "maintenance_status": "Overdue"
+    },
+    {
+      "type": "Usage Log",
+      "record_id": 33,
+      "facility_name": "My name Is Mel",
+      "facility_type": "Classroom",
+      "date": "2004-02-11",
+      "remarks": "I love frog",
+      "user_name": "Merlin",
+      "purpose": "Test",
+      "duration": 24.0
+    },
+    {
+      "type": "Maintenance",
+      "record_id": 34,
+      "facility_name": "My name is Mel",
+      "facility_type": "Classroom",
+      "date": "2004-02-11",
+      "remarks": "",
+      "condition": "Poor",
+      "technician": "Null",
+      "next_service": "2004-02-12",
+      "maintenance_status": "Scheduled"
     }
   ]
 }

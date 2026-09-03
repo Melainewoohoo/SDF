@@ -11,7 +11,7 @@
         "room_name": "Discussion Room 2",
         "room_type": "Discussion Room",
         "capacity": 6,
-        "status": "Maintenance"
+        "status": "Available"
     },
     {
         "room_id": "LH001",
@@ -25,13 +25,6 @@
         "room_name": "Computer Laboratory",
         "room_type": "Computer Laboratory",
         "capacity": 30,
-        "status": "Available"
-    },
-    {
-        "room_id": "DR003",
-        "room_name": "Discussion Room",
-        "room_type": "Discussion Room",
-        "capacity": 12,
         "status": "Available"
     }
 ]
