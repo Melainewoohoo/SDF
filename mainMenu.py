@@ -43,6 +43,13 @@ def on_enter(e):
     # Clears the placeholder text in whichever Entry was just focused
     e.widget.delete(0, 'end')
 
+def open_facility_resource_management(staff_data):
+    clear_window()
+    window.title("Facility Resource Management")
+    window.geometry("1280x650")
+    page = facility_resource_management.FacilityResourceManagementFrame(window, back_command=lambda: staff_menu(staff_data))
+    page.pack(fill="both", expand=True)
+
 def open_facility_usage_maintenance(staff_data):
     clear_window()
     window.title("Facility Usage & Maintenance Management")
@@ -173,12 +180,10 @@ def staff_menu(staff_data):
     Label(frame, text="Welcome, {}".format(staff_data["Name"]), fg="#57a1f8",
           bg="white", font=("Microsoft YaHei UI Light", 12, "bold")).place(x=30, y=60)
 
-    Button(frame, text="Manage Room", font=("Microsoft YaHei UI Light", 11),
-           command=lambda: manage_room.manage_room_page(
-               window, lambda: staff_menu(staff_data)
-           )).place(x=30, y=110)
-    Button(frame, text="Facility Resource", font=("Microsoft YaHei UI Light", 11),
-          command=lambda: facility_resource_management.FacilityResourceManagementFrame(window)).place(x=30, y=150)
+    Button(frame, text="Reserve Room", font=("Microsoft YaHei UI Light", 11),
+           command=lambda: None).place(x=30, y=110)
+    Button(frame, text="Facility Resource management", font=("Microsoft YaHei UI Light", 11),
+          command=lambda: open_facility_resource_management(staff_data)).place(x=30, y=150)
     Button(frame, text="Facility Usage & Maintenance", font=("Microsoft YaHei UI Light", 11),
           command=lambda: open_facility_usage_maintenance(staff_data)).place(x=30, y=190)
     Button(frame, text="Logout", font=("Microsoft YaHei UI Light", 11),
