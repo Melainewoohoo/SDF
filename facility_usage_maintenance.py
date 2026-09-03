@@ -32,10 +32,8 @@ def validate_date(value, field_name="Date"):
 
     return value
 
-
 class InvalidRecordError(Exception):
     pass
-
 
 # ============================================================
 # Parent Class
@@ -69,8 +67,7 @@ class FacilityRecord:
         if value == "":
             raise InvalidRecordError("Facility name cannot be empty.")
 
-        # Keep the user's own capitalization (e.g. "IT Lab", "PCR Lab")
-        # instead of forcing .title(), which would mangle acronyms.
+        # Keep original capitalization
         self._facility_name = value
 
     @property
@@ -128,9 +125,7 @@ class UsageLog(FacilityRecord):
         except ValueError:
             raise InvalidRecordError("Duration must be a number.")
 
-        # float() accepts "nan"/"inf" without raising ValueError, and NaN
-        # comparisons are always False, so it would silently slip past the
-        # range check below. Reject it explicitly.
+        # Reject NaN because it does not behave like a normal numeric value.
         if duration != duration:
             raise InvalidRecordError("Duration must be a number.")
 
@@ -155,7 +150,6 @@ class UsageLog(FacilityRecord):
         data["duration"] = self.duration
 
         return data
-
 
 # ============================================================
 # Child Class 2 - Maintenance Record
@@ -221,12 +215,14 @@ class MaintenanceRecord(FacilityRecord):
 
         return data
 
-
 # ============================================================
 # Manager Class
 # ============================================================
 class FacilityManager:
-
+    """
+    Manage facility usage and maintenance records.
+    Handles CRUD operations, searching, file storage and CSV export.
+    """
     def __init__(self):
         self._records = {}
         self.load_warnings = []
@@ -239,20 +235,18 @@ class FacilityManager:
         self.update_next_id()
 
     def update_next_id(self):
-        """Find unused IDs without reusing numbers saved in the counter file."""
-        # Each id below is computed as max(highest_existing + 1, saved_value),
-        # which is already guaranteed to be free — the old "bump until free"
-        # while-loops that used to follow could never actually run and were
-        # removed.
-        highest_record_id = max(self._records.keys(), default=0)
-        record_id = max(
-            highest_record_id + 1,
-            self._saved_next_ids.get("record", 1)
-        )
+        """Find the next unused record ID."""
+
+        record_id = self._saved_next_ids.get("record", 1)
+
+        while record_id in self._records:
+            record_id += 1
+
         FacilityRecord.next_id = record_id
 
     def assign_new_id(self, record):
-        """Assign an ID only after every input field has passed validation."""
+        """Assign the next unused record ID."""
+
         record._record_id = FacilityRecord.next_id
         FacilityRecord.next_id += 1
 
@@ -307,19 +301,25 @@ class FacilityManager:
                 record.remarks
             ).lower()
 
-            if isinstance(record, UsageLog):
-                text += (
-                    " " + record.user_name.lower() +
-                    " " + record.purpose.lower() +
-                    " " + str(record.duration).lower()
-                )
-            else:
-                text += (
-                    " " + record.technician.lower() +
-                    " " + record.condition.lower() +
-                    " " + record.maintenance_status.lower() +
-                    " " + record.next_service.lower()
-                )
+            match record.record_type():
+
+                case "Usage Log":
+                    text += (
+                        " " + record.user_name.lower() +
+                        " " + record.purpose.lower() +
+                        " " + str(record.duration).lower()
+                    )
+
+                case "Maintenance":
+                    text += (
+                        " " + record.technician.lower() +
+                        " " + record.condition.lower() +
+                        " " + record.maintenance_status.lower() +
+                        " " + record.next_service.lower()
+                    )
+
+                case _:
+                    pass
 
             if keyword in text:
                 result.append(record)
@@ -485,122 +485,13 @@ class FacilityManager:
 
         # next ID will be recalculated by update_next_id()
 
-    # SUMMARY
-    def condition_summary(self):
-        summary = {}
-
-        for condition in CONDITIONS:
-            summary[condition] = 0
-
-        for record in self._records.values():
-            if isinstance(record, MaintenanceRecord):
-                summary[record.condition] += 1
-
-        return summary
-
-    def detailed_report(self):
-        """Calculate usage and maintenance statistics for all records."""
-        usage_count = 0
-        maintenance_count = 0
-        total_usage_hours = 0.0
-        facility_usage = {}
-        facility_types = {}
-        maintenance_statuses = {}
-
-        for facility_type in FACILITY_TYPES:
-            facility_types[facility_type] = 0
-
-        for status in MAINTENANCE_STATUS:
-            maintenance_statuses[status] = 0
-
-        for record in self._records.values():
-            facility_types[record.facility_type] += 1
-
-            if isinstance(record, UsageLog):
-                usage_count += 1
-                total_usage_hours += record.duration
-
-                if record.facility_name not in facility_usage:
-                    facility_usage[record.facility_name] = 0
-
-                facility_usage[record.facility_name] += 1
-            else:
-                maintenance_count += 1
-                maintenance_statuses[record.maintenance_status] += 1
-
-        most_used_facility = "-"
-
-        if facility_usage:
-            highest_usage = max(facility_usage.values())
-            most_used = []
-
-            for facility_name, count in facility_usage.items():
-                if count == highest_usage:
-                    most_used.append(facility_name)
-
-            most_used.sort()
-            most_used_facility = (
-                ", ".join(most_used) + f" ({highest_usage} usage log(s))"
-            )
-
-        return {
-            "total_records": len(self._records),
-            "usage_count": usage_count,
-            "maintenance_count": maintenance_count,
-            "total_usage_hours": total_usage_hours,
-            "most_used_facility": most_used_facility,
-            "facility_types": facility_types,
-            "maintenance_statuses": maintenance_statuses
-        }
-
-    def maintenance_reminders(self, upcoming_days=30, today=None):
-        """Return incomplete maintenance due today or within a date range."""
-        if today is None:
-            today = datetime.today().date()
-
-        reminders = []
-
-        for record in self._records.values():
-            if not isinstance(record, MaintenanceRecord):
-                continue
-
-            if record.maintenance_status == "Completed":
-                continue
-
-            if record.next_service == "":
-                continue
-
-            service_date = datetime.strptime(
-                record.next_service,
-                "%Y-%m-%d"
-            ).date()
-
-            days_remaining = (service_date - today).days
-
-            if days_remaining < 0:
-                reminder = f"Overdue by {abs(days_remaining)} day(s)"
-            elif days_remaining == 0:
-                reminder = "Due Today"
-            elif days_remaining <= upcoming_days:
-                reminder = f"Due in {days_remaining} day(s)"
-            else:
-                continue
-
-            reminders.append((service_date, record, reminder))
-
-        reminders.sort(key=lambda item: (item[0], item[1].code()))
-        return reminders
-
     # EXPORT
     def export_csv(self, path):
         try:
             with open(path, "w", newline="", encoding="utf-8") as file:
                 writer = csv.writer(file)
 
-                # Each field gets its own column so the export can be used
-                # directly for spreadsheet calculations (e.g. summing
-                # Duration, filtering by Next Service) instead of needing
-                # to be re-parsed out of a combined text column.
+                # Export each record field into a separate CSV column.
                 writer.writerow([
                     "ID", "Type", "Facility", "Facility Type", "Date",
                     "User/Technician", "Purpose", "Duration (hours)",
@@ -642,7 +533,6 @@ class FacilityManager:
         except OSError:
             raise InvalidRecordError("Cannot export CSV.")
 
-
 # ============================================================
 # GUI
 # ============================================================
@@ -650,9 +540,7 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
 
     def __init__(self, parent, back_command=None):
         super().__init__(parent, padding=10)
-
         self.back_command = back_command
-        super().__init__(parent, padding=10)
 
         self.manager = FacilityManager()
         self.selected_record = None
@@ -696,7 +584,7 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
             fg="#57a1f8",
             bg="white",
             font=("Microsoft YaHei UI Light", 14, "bold")
-        ).pack(side="left")
+        ).pack(side="top")
 
         # Main buttons
         button_frame = ttk.Frame(self)
@@ -707,8 +595,6 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
             ("Add Usage", self.add_usage_form),
             ("Add Maintenance", self.add_maintenance_form),
             ("Delete", self.delete_selected),
-            ("Report", self.show_detailed_report),
-            ("Maintenance Reminder", self.show_maintenance_reminders),
             ("Export CSV", self.export_csv)
         ]
 
@@ -738,7 +624,6 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
             "<Return>",
             lambda event: self.apply_filter()
         )
-
 
         ttk.Button(
             search_frame,
@@ -770,8 +655,11 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
             "person", "detail", "condition", "status"
         )
 
+        table_frame = ttk.Frame(self)
+        table_frame.pack(fill="both", expand=True, pady=5)
+
         self.tree = ttk.Treeview(
-            self,
+            table_frame,
             columns=columns,
             show="headings",
             height=13
@@ -785,17 +673,46 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
 
         for column, heading in zip(columns, headings):
             self.column_headings[column] = heading
+
             self.tree.heading(
                 column,
                 text=heading,
                 command=lambda selected_column=column:
                     self.sort_table(selected_column)
             )
-            self.tree.column(column, width=130)
 
-        self.tree.pack(fill="both", expand=True, pady=5)
-        self.tree.bind("<<TreeviewSelect>>", self.select_record)
+            self.tree.column(
+                column,
+                width=130
+            )
 
+        # Vertical scrollbar
+        scrollbar = ttk.Scrollbar(
+            table_frame,
+            orient="vertical",
+            command=self.tree.yview
+        )
+
+        self.tree.configure(
+            yscrollcommand=scrollbar.set
+        )
+
+        self.tree.pack(
+            side="left",
+            fill="both",
+            expand=True
+        )
+
+        scrollbar.pack(
+            side="right",
+            fill="y"
+        )
+
+        self.tree.bind(
+            "<<TreeviewSelect>>",
+            self.select_record
+        )
+        
         # Details
         detail_box = ttk.LabelFrame(self, text="Selected Record")
         detail_box.pack(fill="x", pady=8)
@@ -876,15 +793,11 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
         )
         type_combo.grid(row=1, column=1, padx=15, pady=6)
 
-        # Only offer facility types that currently exist among the
-        # records, computed fresh each time so deleted records don't
-        # leave stale options in the list.
+        # Show only facility types that currently have records.
         used_types = sorted({
             record.facility_type for record in self.manager.get_all()
         })
-        # If a previously-chosen facility type no longer has any records
-        # (e.g. its last record was deleted), fall back to "All" instead
-        # of keeping a selection that isn't in the dropdown anymore.
+        # Reset invalid previous selections.
         if facility_var.get() not in used_types:
             facility_var.set("All")
 
@@ -1457,169 +1370,29 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
             "Delete",
             "Are you sure you want to delete this record?"
         ):
-            self.manager.delete(int(selected[0]))
-            self.selected_record = None
-            self.detail_var.set(
-                "Select a record to view details."
-            )
-            self.refresh_table()
+            try:
+                self.manager.delete(int(selected[0]))
+
+                self.selected_record = None
+                self.detail_var.set(
+                    "Select a record to view details."
+                )
+                self.refresh_table()
+
+                messagebox.showinfo(
+                    "Success",
+                    "Record deleted successfully."
+                )
+
+            except InvalidRecordError as error:
+                messagebox.showerror(
+                    "Error",
+                    str(error)
+                )
 
     # ------------------------------------------------------------
-    # Report / Export
+    # Export
     # ------------------------------------------------------------
-    def show_detailed_report(self):
-        """Display complete usage, maintenance, and condition statistics."""
-        report = self.manager.detailed_report()
-        condition_counts = self.manager.condition_summary()
-
-        lines = [
-            "FACILITY USAGE & MAINTENANCE REPORT",
-            "=" * 54,
-            "",
-            f"Total Records: {report['total_records']}",
-            f"Total Usage Logs: {report['usage_count']}",
-            f"Total Maintenance Records: {report['maintenance_count']}",
-            f"Total Usage Hours: {report['total_usage_hours']:.2f}",
-            f"Most-Used Facility: {report['most_used_facility']}",
-            "",
-            "FACILITY TYPE SUMMARY",
-            "-" * 54
-        ]
-
-        for facility_type, count in report["facility_types"].items():
-            lines.append(f"{facility_type}: {count}")
-
-        lines.extend([
-            "",
-            "MAINTENANCE STATUS SUMMARY",
-            "-" * 54
-        ])
-
-        for status, count in report["maintenance_statuses"].items():
-            lines.append(f"{status}: {count}")
-
-        lines.extend([
-            "",
-            "FACILITY CONDITION SUMMARY",
-            "-" * 54
-        ])
-
-        for condition, count in condition_counts.items():
-            lines.append(f"{condition}: {count}")
-
-        window = tk.Toplevel(self)
-        window.title("Report")
-        window.geometry("620x650")
-        window.transient(self.winfo_toplevel())
-
-        report_text = tk.Text(
-            window,
-            wrap="word",
-            font=("Courier New", 10),
-            padx=12,
-            pady=12
-        )
-        report_text.pack(fill="both", expand=True, padx=10, pady=10)
-        report_text.insert("1.0", "\n".join(lines))
-        report_text.configure(state="disabled")
-
-        ttk.Button(
-            window,
-            text="Close",
-            command=window.destroy
-        ).pack(pady=(0, 10))
-
-    def show_maintenance_reminders(self):
-        """Display overdue and upcoming maintenance within 30 days."""
-        reminders = self.manager.maintenance_reminders(upcoming_days=30)
-
-        if not reminders:
-            messagebox.showinfo(
-                "Maintenance Reminder",
-                "No overdue or upcoming maintenance within 30 days."
-            )
-            return
-
-        window = tk.Toplevel(self)
-        window.title("Maintenance Reminder")
-        window.geometry("920x420")
-        window.transient(self.winfo_toplevel())
-
-        ttk.Label(
-            window,
-            text="Overdue and Upcoming Maintenance (Next 30 Days)",
-            font=("Arial", 13, "bold")
-        ).pack(pady=(12, 4))
-
-        ttk.Label(
-            window,
-            text="Completed maintenance records are excluded."
-        ).pack(pady=(0, 8))
-
-        table_frame = ttk.Frame(window)
-        table_frame.pack(fill="both", expand=True, padx=12, pady=5)
-
-        columns = (
-            "id", "facility", "facility_type",
-            "next_service", "status", "reminder"
-        )
-        reminder_tree = ttk.Treeview(
-            table_frame,
-            columns=columns,
-            show="headings",
-            height=11
-        )
-
-        headings = (
-            "ID", "Facility", "Facility Type",
-            "Next Service", "Status", "Reminder"
-        )
-        widths = (90, 170, 130, 110, 130, 190)
-
-        for column, heading, width in zip(columns, headings, widths):
-            reminder_tree.heading(column, text=heading)
-            reminder_tree.column(column, width=width, anchor="center")
-
-        scrollbar = ttk.Scrollbar(
-            table_frame,
-            orient="vertical",
-            command=reminder_tree.yview
-        )
-        reminder_tree.configure(yscrollcommand=scrollbar.set)
-        reminder_tree.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-
-        reminder_tree.tag_configure("overdue", foreground="#b00020")
-        reminder_tree.tag_configure("today", foreground="#c05a00")
-
-        for service_date, record, reminder in reminders:
-            if reminder.startswith("Overdue"):
-                tag = "overdue"
-            elif reminder == "Due Today":
-                tag = "today"
-            else:
-                tag = "upcoming"
-
-            reminder_tree.insert(
-                "",
-                "end",
-                values=(
-                    record.code(),
-                    record.facility_name,
-                    record.facility_type,
-                    service_date.isoformat(),
-                    record.maintenance_status,
-                    reminder
-                ),
-                tags=(tag,)
-            )
-
-        ttk.Button(
-            window,
-            text="Close",
-            command=window.destroy
-        ).pack(pady=10)
-
     def export_csv(self):
         path = filedialog.asksaveasfilename(
             defaultextension=".csv",
@@ -1639,7 +1412,6 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
         except InvalidRecordError as error:
             messagebox.showerror("Error", str(error))
 
-
 def main():
     root = tk.Tk()
     root.title("University Facilities Booking App")
@@ -1649,7 +1421,6 @@ def main():
     page.pack(fill="both", expand=True)
 
     root.mainloop()
-
 
 if __name__ == "__main__":
     main()
