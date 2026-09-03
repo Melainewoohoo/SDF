@@ -3,55 +3,10 @@
         "student_id": 2600827,
         "student_name": "Mely",
         "room": "Lecture Hall",
-        "booking_date": "2026-09-05",
-        "start_time": "11:00",
-        "end_time": "12:00",
-        "status": "Reserved"
-    },
-    {
-        "student_id": 2600827,
-        "student_name": "Mely",
-        "room": "Lecture Hall",
         "booking_date": "2026-09-16",
         "start_time": "14:00",
         "end_time": "16:00",
-        "status": "Checked In"
-    },
-    {
-        "student_id": 2600827,
-        "student_name": "Mely",
-        "room": "Computer Laboratory",
-        "booking_date": "2026-09-03",
-        "start_time": "14:00",
-        "end_time": "16:00",
-        "number_of_pax": 2,
-        "members": [
-            {
-                "student_id": "2612778",
-                "student_name": "Neo"
-            }
-        ],
-        "status": "Reserved"
-    },
-    {
-        "student_id": 2600827,
-        "student_name": "Mely",
-        "room": "Computer Laboratory",
-        "booking_date": "2026-09-16",
-        "start_time": "09:00",
-        "end_time": "11:00",
-        "number_of_pax": 3,
-        "members": [
-            {
-                "student_id": "2612778",
-                "student_name": "Neo"
-            },
-            {
-                "student_id": "2610161",
-                "student_name": "AhXun"
-            }
-        ],
-        "status": "Reserved"
+        "status": "Checked Out"
     },
     {
         "student_id": 2600827,
@@ -65,14 +20,6 @@
         "status": "Checked Out"
     },
     {
-
-        "student_id": 2610161,
-        "student_name": "AhXun",
-        "room": "Lecture Hall",
-        "booking_date": "2026-09-11",
-        "start_time": "15:00",
-        "end_time": "16:00",
-
         "student_id": 2600827,
         "student_name": "Mely",
         "room": "Discussion Room 2",
@@ -82,17 +29,5 @@
         "number_of_pax": 1,
         "members": [],
         "status": "Checked In"
-    },
-    {
-        "student_id": 2600827,
-        "student_name": "Mely",
-        "room": "Discussion Room 1",
-        "booking_date": "2026-09-16",
-        "start_time": "10:00",
-        "end_time": "11:00",
-
-        "number_of_pax": 1,
-        "members": [],
-        "status": "Reserved"
     }
 ]
