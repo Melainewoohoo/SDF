@@ -4,45 +4,16 @@ from datetime import date, timedelta
 from tkinter import (Button, Checkbutton, Entry, Frame, IntVar, Label, Listbox,
                      OptionMenu, Scrollbar, StringVar, Text, END, messagebox)
 
-
 RESERVATION_FILE = "room_reservations.json"
-ROOM_FILE = "rooms.json"
-ROOMS = ["Discussion Room 1", "Discussion Room 2", "Lecture Hall", "Computer Laboratory"]
+FACILITY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "facility_file.json")
 
-# Fixed weekly schedule for every room.
 # Each item contains the day, start time and end time.
-ROOM_SCHEDULE = {
-    "Discussion Room 1": [
-        ("Monday", "09:00", "10:00"),
-        ("Monday", "14:00", "15:00"),
-        ("Wednesday", "10:00", "11:00"),
-        ("Friday", "15:00", "16:00"),
-    ],
-    "Discussion Room 2": [
-        ("Tuesday", "09:00", "10:00"),
-        ("Tuesday", "13:00", "14:00"),
-        ("Thursday", "11:00", "12:00"),
-        ("Friday", "10:00", "11:00"),
-    ],
-    "Lecture Hall": [
-        ("Monday", "11:00", "13:00"),
-        ("Wednesday", "14:00", "16:00"),
-        ("Friday", "09:00", "11:00"),
-    ],
-    "Computer Laboratory": [
-        ("Tuesday", "10:00", "12:00"),
-        ("Wednesday", "09:00", "11:00"),
-        ("Thursday", "14:00", "16:00"),
-    ],
-}
-
-# A newly added room uses these fixed slots until its own schedule is added.
 DEFAULT_ROOM_SCHEDULE = [
     ("Monday", "09:00", "10:00"),
     ("Tuesday", "11:00", "12:00"),
     ("Wednesday", "14:00", "15:00"),
     ("Thursday", "10:00", "11:00"),
-    ("Friday", "15:00", "16:00"),
+    ("Friday", "15:00", "16:00")
 ]
 
 TERMS_TEXT = """Terms of use:
@@ -77,24 +48,22 @@ def _save_reservations(reservations):
     with open(RESERVATION_FILE, "w", encoding="utf-8") as file:
         json.dump(reservations, file, indent=4)
 
-
-def load_available_rooms():
-    # Read the rooms created by staff in the Manage Room page.
-    if not os.path.exists(ROOM_FILE):
-        return ROOMS
-
+def load_active_facilities():
+    # Read facility_file.json.
     try:
-        with open(ROOM_FILE, "r", encoding="utf-8") as file:
-            room_records = json.load(file)
-    except (OSError, json.JSONDecodeError):
-        return ROOMS
+        with open(FACILITY_FILE, "r", encoding="utf-8") as file:
+            facility_data = json.load(file)
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        return []
 
-    available_rooms = []
-    for room in room_records:
-        if room.get("status") == "Available":
-            available_rooms.append(room.get("room_name"))
+    active_facilities = []
+    for record in facility_data.get("records", []):
+        if record.get("type") == "Facility" and record.get("status") == "Active":
+            facility_name = record.get("resource_name", "").strip()
+            if facility_name != "":
+                active_facilities.append(facility_name)
 
-    return available_rooms
+    return active_facilities
 
 
 def booking_page(window, student_data, back_command):
@@ -121,11 +90,11 @@ def booking_page(window, student_data, back_command):
         booking_date = date.today() + timedelta(days=offset)
         available_dates.append(booking_date.strftime("%Y-%m-%d"))
 
-    booking_rooms = load_available_rooms()
-    if len(booking_rooms) == 0:
-        booking_rooms = ["No rooms available"]
+    active_rooms = load_active_facilities()
+    if len(active_rooms) == 0:
+        active_rooms = ["No active facilities"]
 
-    room_var = StringVar(window, value=booking_rooms[0])
+    room_var = StringVar(window, value=active_rooms[0])
     date_var = StringVar(window, value="All Dates")
     pax_var = StringVar(window, value="1")
     agreed_var = IntVar(window, value=0)
@@ -133,7 +102,7 @@ def booking_page(window, student_data, back_command):
 
     Label(form, text="Room", bg="#f7f9fc",
           font=("Microsoft YaHei UI Light", 10, "bold")).place(x=15, y=15)
-    OptionMenu(form, room_var, *booking_rooms).place(x=70, y=10, width=205)
+    OptionMenu(form, room_var, *active_rooms).place(x=70, y=10, width=205)
 
     Label(form, text="Date", bg="#f7f9fc",
           font=("Microsoft YaHei UI Light", 10, "bold")).place(x=15, y=50)
@@ -199,21 +168,21 @@ def booking_page(window, student_data, back_command):
         selected_date = date_var.get()
         reservations = _load_reservations()
 
-        if selected_room == "No rooms available":
-            available_list.insert(END, "No rooms are currently available.")
+        if selected_room == "No active facilities":
+            available_list.insert(END, "No active facilities are available for booking.")
             return
 
-        if selected_room in ROOM_SCHEDULE:
-            selected_schedule = ROOM_SCHEDULE[selected_room]
-        else:
-            selected_schedule = DEFAULT_ROOM_SCHEDULE
+        # Check the shared file again in case staff changed the status.
+        if selected_room not in load_active_facilities():
+            available_list.insert(END, "This facility is no longer active.")
+            return
 
         for booking_date in available_dates:
             if selected_date != "All Dates" and selected_date != booking_date:
                 continue
 
             day_name = date.fromisoformat(booking_date).strftime("%A")
-            for schedule in selected_schedule:
+            for schedule in DEFAULT_ROOM_SCHEDULE:
                 schedule_day = schedule[0]
                 start_time = schedule[1]
                 end_time = schedule[2]
@@ -239,7 +208,8 @@ def booking_page(window, student_data, back_command):
         selected = available_list.curselection()
         if (not selected
                 or available_list.get(selected[0]).startswith("No available")
-                or available_list.get(selected[0]).startswith("No rooms")):
+                or available_list.get(selected[0]).startswith("No active")
+                or available_list.get(selected[0]).startswith("This facility")):
             messagebox.showerror("No Selection", "Please select an available date and time.")
             return
 
@@ -324,7 +294,7 @@ def booking_history_page(window, student_data, back_command):
     window.configure(bg="#ffffff")
     window.title("My Booking")
 
-    Label(window, text="My Booking", fg="#57a1f8", bg="#ffffff",
+    Label(window, text="My Booking History", fg="#57a1f8", bg="#ffffff",
           font=("Microsoft YaHei UI Light", 20, "bold")).place(x=330, y=30)
     Label(window, text=f"Student: {student_data['Name']}  |  ID: {student_data['ID']}",
           fg="#444444", bg="#ffffff",
