@@ -72,5 +72,16 @@
         "number_of_pax": 1,
         "members": [],
         "status": "Checked Out"
+    },
+    {
+        "student_id": 2600827,
+        "student_name": "Mely",
+        "room": "Discussion Room 2",
+        "booking_date": "2026-09-09",
+        "start_time": "10:00",
+        "end_time": "11:00",
+        "number_of_pax": 1,
+        "members": [],
+        "status": "Reserved"
     }
 ]
