@@ -37,7 +37,7 @@ def validate_date(value, field_name="Date"):
 
 def validate_positive_int(value, field_name):
     """Validate a whole number greater than zero."""
-    value = value.strip()
+    value = str(value).strip()
 
     try:
         number = int(value)
@@ -561,9 +561,10 @@ class ResourceManager:
 # ============================================================
 class FacilityResourceManagementFrame(ttk.Frame):
 
-    def __init__(self, parent):
+    def __init__(self, parent, back_command=None):
         super().__init__(parent, padding=10)
 
+        self.back_command = back_command
         self.manager = ResourceManager()
         self.selected_record = None
 

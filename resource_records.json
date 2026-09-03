@@ -1,0 +1,31 @@
+{
+  "next_ids": {
+    "record": 4
+  },
+  "records": [
+    {
+      "type": "Equipment",
+      "record_id": 2,
+      "resource_name": "LUMOS",
+      "resource_type": "Projector",
+      "date_added": "2026-08-31",
+      "condition": "Good",
+      "status": "Active",
+      "remarks": "",
+      "serial_number": "AG001",
+      "quantity": 10
+    },
+    {
+      "type": "Facility",
+      "record_id": 3,
+      "resource_name": "DK4",
+      "resource_type": "Lecture Hall",
+      "date_added": "2026-08-31",
+      "condition": "Good",
+      "status": "Active",
+      "remarks": "",
+      "location": "near DK3",
+      "capacity": 50
+    }
+  ]
+}
