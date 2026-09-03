@@ -7,7 +7,6 @@ from tkinter import (Button, Checkbutton, Entry, Frame, IntVar, Label, Listbox,
 RESERVATION_FILE = "room_reservations.json"
 FACILITY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "facility_file.json")
 
-# Each item contains the day, start time and end time.
 DEFAULT_ROOM_SCHEDULE = [
     ("Monday", "09:00", "10:00"),
     ("Tuesday", "11:00", "12:00"),
@@ -33,7 +32,7 @@ NOTE 1: Discussion rooms are strictly to be used for academic purposes only.
 NOTE 2: Projecting movies from the projector is prohibited due to copyright issues."""
 
 
-def _load_reservations():
+def Load_Reservations():
     if not os.path.exists(RESERVATION_FILE):
         return []
     try:
@@ -44,11 +43,11 @@ def _load_reservations():
         return []
 
 
-def _save_reservations(reservations):
+def Save_Reservations(reservations):
     with open(RESERVATION_FILE, "w", encoding="utf-8") as file:
         json.dump(reservations, file, indent=4)
 
-def load_active_facilities():
+def Load_Active_Facilities():
     # Read facility_file.json.
     try:
         with open(FACILITY_FILE, "r", encoding="utf-8") as file:
@@ -65,9 +64,8 @@ def load_active_facilities():
 
     return active_facilities
 
-
+#-----------------------------------------------DISPLAY RESERVE VENUE PAGE BUTTON-----------------------------
 def booking_page(window, student_data, back_command):
-    # Display the student reservation page.
     for widget in window.winfo_children():
         widget.destroy()
 
@@ -85,20 +83,20 @@ def booking_page(window, student_data, back_command):
                  highlightbackground="#d8e3ef")
     form.place(x=25, y=85)
 
-    available_dates = []
-    for offset in range(14):
-        booking_date = date.today() + timedelta(days=offset)
+    available_dates = []        #create the available date empty list so it stores the date student select
+    for offset in range(14):    #offset means the number of days added to today, so 0 - today, 1 - tmr
+        booking_date = date.today() + timedelta(days=offset) #timedelta represent a number of days
         available_dates.append(booking_date.strftime("%Y-%m-%d"))
 
-    active_rooms = load_active_facilities()
-    if len(active_rooms) == 0:
+    active_rooms = Load_Active_Facilities()
+    if len(active_rooms) == 0:      #returns the number of room in the list
         active_rooms = ["No active facilities"]
 
     room_var = StringVar(window, value=active_rooms[0])
     date_var = StringVar(window, value="All Dates")
     pax_var = StringVar(window, value="1")
     agreed_var = IntVar(window, value=0)
-    member_entries = []
+    member_entries = []     
 
     Label(form, text="Venue", bg="#f7f9fc",
           font=("Microsoft YaHei UI Light", 10, "bold")).place(x=15, y=15)
@@ -127,7 +125,7 @@ def booking_page(window, student_data, back_command):
     member_frame = Frame(form, width=420, height=100, bg="#f7f9fc")
     member_frame.place(x=15, y=258)
 
-    def show_member_fields(selected_pax):
+    def ShowMemberFields(selected_pax):
         for widget in member_frame.winfo_children():
             widget.destroy()
         member_entries.clear()
@@ -138,13 +136,14 @@ def booking_page(window, student_data, back_command):
             id_entry.place(x=0, y=member_number * 20)
             name_entry = Entry(member_frame, width=22)
             name_entry.place(x=165, y=member_number * 20)
-            member_entries.append((id_entry, name_entry))
+            member_entries.append((id_entry, name_entry))       #new entry will be store in tuple
 
-    pax_menu["menu"].delete(0, END)
-    for pax in range(1, 7):
+    pax_menu["menu"].delete(0, END)     #clear existing dropdown option so it can be recreated w/ custom commands
+    for pax in range(1, 7):     #7 not included
         pax_menu["menu"].add_command(
             label=str(pax),
-            command=lambda value=str(pax): (pax_var.set(value), show_member_fields(value)),
+                            #pax is int, converts to text
+            command=lambda value=str(pax): (pax_var.set(value), ShowMemberFields(value)),
         )
 
     Label(form, text="Booking Guidelines", bg="#f7f9fc", fg="#222222",
@@ -166,14 +165,14 @@ def booking_page(window, student_data, back_command):
         available_list.delete(0, END)
         selected_room = room_var.get()
         selected_date = date_var.get()
-        reservations = _load_reservations()
+        reservations = Load_Reservations()
 
         if selected_room == "No active facilities":
             available_list.insert(END, "No active facilities are available for booking.")
             return
 
         # Check the shared file again in case staff changed the status.
-        if selected_room not in load_active_facilities():
+        if selected_room not in Load_Active_Facilities():
             available_list.insert(END, "This facility is no longer active.")
             return
 
@@ -248,7 +247,7 @@ def booking_page(window, student_data, back_command):
         start_time = time_parts[0]
         end_time = time_parts[1]
 
-        reservations = _load_reservations()
+        reservations = Load_Reservations()
         reservations.append({
             "student_id": student_data["ID"],
             "student_name": student_data["Name"],
@@ -262,7 +261,7 @@ def booking_page(window, student_data, back_command):
         })
 
         try:
-            _save_reservations(reservations)
+            Save_Reservations(reservations)
         except OSError as error:
             messagebox.showerror("Save Failed", f"The reservation could not be saved:\n{error}")
             return
@@ -281,7 +280,7 @@ def booking_page(window, student_data, back_command):
     Button(window, text="Back", command=back_command,
            font=("Microsoft YaHei UI Light", 10), width=10).place(x=25, y=455)
 
-    show_member_fields("1")
+    ShowMemberFields("1")
     search_available_slots()
 
 
@@ -294,7 +293,7 @@ def booking_history_page(window, student_data, back_command):
     window.configure(bg="#ffffff")
     window.title("My Booking")
 
-    Label(window, text="My Booking History", fg="#57a1f8", bg="#ffffff",
+    Label(window, text="My Booking", fg="#57a1f8", bg="#ffffff",
           font=("Microsoft YaHei UI Light", 20, "bold")).place(x=330, y=30)
     Label(window, text=f"Student: {student_data['Name']}  |  ID: {student_data['ID']}",
           fg="#444444", bg="#ffffff",
@@ -339,7 +338,7 @@ def booking_history_page(window, student_data, back_command):
         booking_list.delete(0, END)
         student_bookings.clear()
 
-        reservations = _load_reservations()
+        reservations = Load_Reservations()
         for reservation in reservations:
             if str(reservation.get("student_id")) == str(student_data["ID"]):
                 student_bookings.append(reservation)
@@ -350,14 +349,15 @@ def booking_history_page(window, student_data, back_command):
         )
 
         for reservation in student_bookings:
-            room = reservation.get("room", "Unknown")[:25]
+            room = reservation.get("room", "Unknown")[:25]      #keep first 25 characters
             booking_date = reservation.get("booking_date", "-")
             time_range = (reservation.get("start_time", "-") + " - "
                           + reservation.get("end_time", "-"))
             status = reservation.get("status", "Reserved")
             booking_list.insert(
                 END,
-                f"{room:<26}{booking_date:<13}{time_range:<18}{status}",
+                # < left align the text, 
+                f"{room:<26}{booking_date:<13}{time_range:<18}{status}",    #combine all booking in a row
             )
 
         if len(student_bookings) == 0:
@@ -384,14 +384,14 @@ def booking_history_page(window, student_data, back_command):
         if selected_booking is None:
             return
 
-        reservations = _load_reservations()
+        reservations = Load_Reservations()
         for reservation in reservations:
             if booking_matches(reservation, selected_booking):
                 reservation["status"] = new_status
                 break
 
         try:
-            _save_reservations(reservations)
+            Save_Reservations(reservations)
         except OSError as error:
             messagebox.showerror("Update Failed", f"The booking could not be updated:\n{error}")
             return
@@ -449,7 +449,7 @@ def booking_history_page(window, student_data, back_command):
         if not confirm_cancel:
             return
 
-        reservations = _load_reservations()
+        reservations = Load_Reservations()
         updated_reservations = []
         booking_removed = False
         for reservation in reservations:
@@ -459,7 +459,7 @@ def booking_history_page(window, student_data, back_command):
                 updated_reservations.append(reservation)
 
         try:
-            _save_reservations(updated_reservations)
+            Save_Reservations(updated_reservations)
         except OSError as error:
             messagebox.showerror("Cancellation Failed",
                                  f"The booking could not be cancelled:\n{error}")
