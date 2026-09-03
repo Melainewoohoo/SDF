@@ -54,9 +54,7 @@ class InvalidRecordError(Exception):
     pass
 
 
-# ============================================================
-# Parent Class
-# ============================================================
+#parentClass
 class ResourceRecord:
     next_id = 1
 
@@ -96,8 +94,6 @@ class ResourceRecord:
         if value == "":
             raise InvalidRecordError("Resource name cannot be empty.")
 
-        # Keep the user's own capitalization (e.g. "IT Lab", "PCR Lab")
-        # instead of forcing .title(), which would mangle acronyms.
         self._resource_name = value
 
     @property
@@ -136,9 +132,7 @@ class ResourceRecord:
         }
 
 
-# ============================================================
-# Child Class 1 - Facility
-# ============================================================
+#childClass
 class Facility(ResourceRecord):
 
     def __init__(self, resource_name, resource_type, date_added,
@@ -171,9 +165,7 @@ class Facility(ResourceRecord):
         return data
 
 
-# ============================================================
-# Child Class 2 - Equipment
-# ============================================================
+#childClass
 class Equipment(ResourceRecord):
 
     def __init__(self, resource_name, resource_type, date_added,
@@ -203,9 +195,6 @@ class Equipment(ResourceRecord):
         return data
 
 
-# ============================================================
-# Manager Class
-# ============================================================
 class ResourceManager:
 
     def __init__(self):
@@ -213,7 +202,7 @@ class ResourceManager:
         self.load_warnings = []
         self._saved_next_ids = {}
 
-        # Reset the counter in case a manager was created before (e.g. tests).
+        # Reset the counter
         ResourceRecord.next_id = 1
 
         self.load_file()
@@ -233,7 +222,6 @@ class ResourceManager:
         record._record_id = ResourceRecord.next_id
         ResourceRecord.next_id += 1
 
-    # CREATE
     def add_facility(self, values):
         record = Facility(*values)
         old_next_id = ResourceRecord.next_id
@@ -260,7 +248,6 @@ class ResourceManager:
             ResourceRecord.next_id = old_next_id
             raise
 
-    # READ
     def get_all(self):
         return list(self._records.values())
 
@@ -314,7 +301,6 @@ class ResourceManager:
 
         return result
 
-    # UPDATE
     def update_record(self, record_id, values):
         """Update every field of the selected record."""
         old_record = self.get(record_id)
@@ -328,7 +314,7 @@ class ResourceManager:
         else:
             updated_record = Equipment(*values)
 
-        # Keep the original record ID after editing.
+
         updated_record._record_id = record_id
         self._records[record_id] = updated_record
 
@@ -338,7 +324,6 @@ class ResourceManager:
             self._records[record_id] = old_record
             raise
 
-    # DELETE
     def delete(self, record_id):
         if record_id in self._records:
             deleted_record = self._records.pop(record_id)
@@ -351,7 +336,6 @@ class ResourceManager:
         else:
             raise InvalidRecordError("Record not found.")
 
-    # FILE PROCESSING
     def save_file(self):
         records = []
 
@@ -396,7 +380,6 @@ class ResourceManager:
             return
 
         if isinstance(data, list):
-            # Compatibility with files produced by earlier versions.
             items = data
         elif isinstance(data, dict) and isinstance(data.get("records"), list):
             items = data["records"]
@@ -460,9 +443,6 @@ class ResourceManager:
                 )
                 continue
 
-        # next ID will be recalculated by update_next_id()
-
-    # SUMMARY
     def condition_summary(self):
         summary = {}
 
@@ -515,16 +495,11 @@ class ResourceManager:
             "resource_types": resource_types
         }
 
-    # EXPORT
     def export_csv(self, path):
         try:
             with open(path, "w", newline="", encoding="utf-8") as file:
                 writer = csv.writer(file)
 
-                # Each field gets its own column so the export can be used
-                # directly for spreadsheet calculations (e.g. summing
-                # Capacity/Quantity, filtering by Status) instead of needing
-                # to be re-parsed out of a combined text column.
                 writer.writerow([
                     "ID", "Type", "Resource Name", "Resource Type",
                     "Date Added", "Location/Serial", "Capacity/Quantity",
@@ -556,9 +531,6 @@ class ResourceManager:
             raise InvalidRecordError("Cannot export CSV.")
 
 
-# ============================================================
-# GUI
-# ============================================================
 class FacilityResourceManagementFrame(ttk.Frame):
 
     def __init__(self, parent, back_command=None):
@@ -667,7 +639,6 @@ class FacilityResourceManagementFrame(ttk.Frame):
             command=self.refresh_table
         ).pack(side="left", padx=3)
 
-        # Record table
         columns = (
             "id", "type", "name", "resource_type", "date_added",
             "detail", "capacity_qty", "condition", "status"
@@ -699,7 +670,6 @@ class FacilityResourceManagementFrame(ttk.Frame):
         self.tree.pack(fill="both", expand=True, pady=5)
         self.tree.bind("<<TreeviewSelect>>", self.select_record)
 
-        # Details
         detail_box = ttk.LabelFrame(self, text="Selected Record")
         detail_box.pack(fill="x", pady=8)
 
@@ -722,9 +692,6 @@ class FacilityResourceManagementFrame(ttk.Frame):
             command=self.edit_selected
         ).pack(side="left", padx=3)
 
-    # ------------------------------------------------------------
-    # Table
-    # ------------------------------------------------------------
     def refresh_table(self):
         self.search_var.set("")
         self.clear_filter_values()
@@ -746,7 +713,6 @@ class FacilityResourceManagementFrame(ttk.Frame):
         window.transient(self.winfo_toplevel())
         window.grab_set()
 
-        # Use temporary variables so Cancel discards every change.
         type_var = tk.StringVar(value=self.filter_type_var.get())
         resource_type_var = tk.StringVar(value=self.filter_resource_type_var.get())
         condition_var = tk.StringVar(value=self.filter_condition_var.get())
@@ -779,9 +745,6 @@ class FacilityResourceManagementFrame(ttk.Frame):
         )
         type_combo.grid(row=1, column=1, padx=15, pady=6)
 
-        # Only offer resource types that currently exist among the
-        # records, computed fresh each time so deleted records don't
-        # leave stale options in the list.
         used_types = sorted({
             record.resource_type for record in self.manager.get_all()
         })
@@ -1011,9 +974,7 @@ class FacilityResourceManagementFrame(ttk.Frame):
 
         self.detail_var.set(text)
 
-    # ------------------------------------------------------------
-    # Add Forms
-    # ------------------------------------------------------------
+
     def add_facility_form(self):
         self.create_form(
             "Add Facility",
@@ -1111,7 +1072,7 @@ class FacilityResourceManagementFrame(ttk.Frame):
                 if isinstance(widgets[wrong_index], ttk.Entry):
                     widgets[wrong_index].selection_range(0, tk.END)
 
-        # Press Enter = Save
+
         window.bind(
             "<Return>",
             lambda event: save()
@@ -1154,9 +1115,6 @@ class FacilityResourceManagementFrame(ttk.Frame):
         else:
             return 0
 
-    # ------------------------------------------------------------
-    # Update / Delete
-    # ------------------------------------------------------------
     def edit_selected(self):
         """Edit all information of the selected record."""
         record = self.selected_record
@@ -1274,7 +1232,6 @@ class FacilityResourceManagementFrame(ttk.Frame):
                 if isinstance(widgets[wrong_index], ttk.Entry):
                     widgets[wrong_index].selection_range(0, tk.END)
 
-        # Press Enter = Save
         window.bind(
             "<Return>",
             lambda event: save_changes()
@@ -1311,9 +1268,7 @@ class FacilityResourceManagementFrame(ttk.Frame):
             )
             self.refresh_table()
 
-    # ------------------------------------------------------------
-    # Report / Export
-    # ------------------------------------------------------------
+
     def show_detailed_report(self):
         """Display complete facility and equipment inventory statistics."""
         report = self.manager.detailed_report()
