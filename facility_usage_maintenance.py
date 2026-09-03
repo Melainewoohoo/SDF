@@ -69,7 +69,6 @@ class FacilityRecord:
 
         # Keep original capitalization
         self._facility_name = value
-        self._facility_name = value
 
     @property
     def date(self):
