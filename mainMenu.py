@@ -188,11 +188,7 @@ def staff_menu(staff_data):
     Button(frame, text="Logout", font=("Microsoft YaHei UI Light", 11),
            command=main_menu).place(x=30, y=230)
 
-
-# ---------------------------------------------------------------------
 # MAIN MENU
-# ---------------------------------------------------------------------
-
 def main_menu():
     # NOTE: this no longer creates a new Tk() each time — it just clears
     # and rebuilds the ONE window created at the bottom of this file.
