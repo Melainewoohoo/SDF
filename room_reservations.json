@@ -2,15 +2,6 @@
     {
         "student_id": 2600827,
         "student_name": "Mely",
-        "room": "Discussion Room 1",
-        "booking_date": "2026-09-02",
-        "start_time": "08:00",
-        "end_time": "11:00",
-        "status": "Reserved"
-    },
-    {
-        "student_id": 2600827,
-        "student_name": "Mely",
         "room": "Lecture Hall",
         "booking_date": "2026-09-05",
         "start_time": "11:00",
@@ -78,6 +69,17 @@
         "student_name": "Mely",
         "room": "Discussion Room 2",
         "booking_date": "2026-09-09",
+        "start_time": "10:00",
+        "end_time": "11:00",
+        "number_of_pax": 1,
+        "members": [],
+        "status": "Checked In"
+    },
+    {
+        "student_id": 2600827,
+        "student_name": "Mely",
+        "room": "Discussion Room 1",
+        "booking_date": "2026-09-16",
         "start_time": "10:00",
         "end_time": "11:00",
         "number_of_pax": 1,

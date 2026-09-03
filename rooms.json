@@ -26,5 +26,12 @@
         "room_type": "Computer Laboratory",
         "capacity": 30,
         "status": "Available"
+    },
+    {
+        "room_id": "DR003",
+        "room_name": "Discussion Room",
+        "room_type": "Discussion Room",
+        "capacity": 12,
+        "status": "Available"
     }
 ]
