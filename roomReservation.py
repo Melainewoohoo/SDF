@@ -59,7 +59,7 @@ def load_active_facilities():
     active_facilities = []
     for record in facility_data.get("records", []):
         if record.get("type") == "Facility" and record.get("status") == "Active":
-            facility_name = record.get("resource_name", "").strip()
+            facility_name = record.get("resource_type", "").strip()
             if facility_name != "":
                 active_facilities.append(facility_name)
 
@@ -73,9 +73,9 @@ def booking_page(window, student_data, back_command):
 
     window.geometry("925x500+300+200")
     window.configure(bg="#ffffff")
-    window.title("Student Room Reservation")
+    window.title("Student Facility Reservation")
 
-    Label(window, text="Room Reservation", fg="#57a1f8", bg="#ffffff",
+    Label(window, text="Facility Reservation", fg="#57a1f8", bg="#ffffff",
           font=("Microsoft YaHei UI Light", 18, "bold")).place(x=350, y=12)
     Label(window, text=f"Student: {student_data['Name']}  |  ID: {student_data['ID']}",
           fg="#444444", bg="#ffffff",
@@ -100,7 +100,7 @@ def booking_page(window, student_data, back_command):
     agreed_var = IntVar(window, value=0)
     member_entries = []
 
-    Label(form, text="Room", bg="#f7f9fc",
+    Label(form, text="Venue", bg="#f7f9fc",
           font=("Microsoft YaHei UI Light", 10, "bold")).place(x=15, y=15)
     OptionMenu(form, room_var, *active_rooms).place(x=70, y=10, width=205)
 
@@ -114,7 +114,7 @@ def booking_page(window, student_data, back_command):
                              bg="#ffffff", selectbackground="#57a1f8")
     available_list.place(x=15, y=110)
 
-    Label(form, text="Number of Pax (maximum 6, including you)", bg="#f7f9fc",
+    Label(form, text="Number of Pax", bg="#f7f9fc",
           font=("Microsoft YaHei UI Light", 9, "bold")).place(x=15, y=205)
     pax_menu = OptionMenu(form, pax_var, "1", "2", "3", "4", "5", "6")
     pax_menu.place(x=285, y=198, width=65)

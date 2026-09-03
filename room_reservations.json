@@ -29,5 +29,16 @@
         "number_of_pax": 1,
         "members": [],
         "status": "Checked In"
+    },
+    {
+        "student_id": 2600827,
+        "student_name": "Mely",
+        "room": "Gym",
+        "booking_date": "2026-09-15",
+        "start_time": "11:00",
+        "end_time": "12:00",
+        "number_of_pax": 1,
+        "members": [],
+        "status": "Reserved"
     }
 ]
