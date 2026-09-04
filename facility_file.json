@@ -1,6 +1,6 @@
 {
   "next_ids": {
-    "record": 5
+    "record": 8
   },
   "records": [
     {
@@ -9,7 +9,7 @@
       "resource_name": "DK3",
       "resource_type": "Lecture Hall",
       "date_added": "2026-08-31",
-      "condition": "Good",
+      "condition": "Fair",
       "status": "Active",
       "remarks": "",
       "location": "near DK4",
@@ -50,6 +50,18 @@
       "remarks": "",
       "serial_number": "P001",
       "quantity": 10
+    },
+    {
+      "type": "Facility",
+      "record_id": 6,
+      "resource_name": "PA205",
+      "resource_type": "Classroom",
+      "date_added": "2026-08-31",
+      "condition": "Good",
+      "status": "Active",
+      "remarks": "",
+      "location": "Block PA, level1",
+      "capacity": 30
     }
   ]
 }

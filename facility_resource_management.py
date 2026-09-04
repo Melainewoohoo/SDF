@@ -11,7 +11,7 @@ APP_FOLDER = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(APP_FOLDER, "facility_file.json")
 
 CONDITIONS = ("Good", "Fair", "Poor", "Under Repair")
-STATUSES = ("Active", "Inactive", "Retired")
+STATUSES = ("Active", "Inactive")
 FACILITY_TYPES = ("Classroom", "Lecture Hall", "Lab", "Gym",
                   "Court", "Pool", "Field")
 EQUIPMENT_TYPES = ("Projector", "Laptop", "Lab Instrument",
