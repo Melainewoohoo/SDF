@@ -576,7 +576,6 @@ class FacilityResourceManagementFrame(ttk.Frame):
             font=("Arial", 16, "bold")
         ).pack(pady=10)
 
-        # Main buttons
         button_frame = ttk.Frame(self)
         button_frame.pack(fill="x", pady=5)
 
