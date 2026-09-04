@@ -1,6 +1,6 @@
 {
   "next_ids": {
-    "record": 4
+    "record": 5
   },
   "records": [
     {
@@ -38,6 +38,18 @@
       "remarks": "",
       "location": "Arena,level2",
       "capacity": 30
+    },
+    {
+      "type": "Equipment",
+      "record_id": 4,
+      "resource_name": "mexas",
+      "resource_type": "Projector",
+      "date_added": "2026-08-31",
+      "condition": "Good",
+      "status": "Active",
+      "remarks": "",
+      "serial_number": "P001",
+      "quantity": 10
     }
   ]
 }

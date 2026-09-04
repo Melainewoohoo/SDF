@@ -133,6 +133,12 @@ class ResourceRecord:
 
 
 #childClass
+# NOTE: Facility is kept here only so this module can correctly parse and
+# re-save Facility records that already exist in facility_file.json.
+# Facility records are managed exclusively by the Manage Room screen
+# (manage_room.py) now - this module no longer creates, edits, deletes,
+# or displays them. They are loaded silently and written back unchanged
+# whenever this module saves the file, so room data is never lost.
 class Facility(ResourceRecord):
 
     def __init__(self, resource_name, resource_type, date_added,
@@ -222,19 +228,6 @@ class ResourceManager:
         record._record_id = ResourceRecord.next_id
         ResourceRecord.next_id += 1
 
-    def add_facility(self, values):
-        record = Facility(*values)
-        old_next_id = ResourceRecord.next_id
-        self.assign_new_id(record)
-        self._records[record.record_id] = record
-
-        try:
-            self.save_file()
-        except InvalidRecordError:
-            del self._records[record.record_id]
-            ResourceRecord.next_id = old_next_id
-            raise
-
     def add_equipment(self, values):
         record = Equipment(*values)
         old_next_id = ResourceRecord.next_id
@@ -251,18 +244,32 @@ class ResourceManager:
     def get_all(self):
         return list(self._records.values())
 
-    def get(self, record_id):
-        return self._records.get(record_id)
+    def get_equipment(self):
+        """Return only Equipment records - the only type this module manages."""
+        return [
+            record for record in self._records.values()
+            if isinstance(record, Equipment)
+        ]
 
-    def search(self, keyword):
+    def get(self, record_id):
+        record = self._records.get(record_id)
+        # Facility records are out of scope for this module.
+        if isinstance(record, Facility):
+            return None
+        return record
+
+    def search(self, keyword, records=None):
+        if records is None:
+            records = self.get_equipment()
+
         keyword = keyword.strip().lower()
 
         if keyword == "":
-            return self.get_all()
+            return list(records)
 
         result = []
 
-        for record in self._records.values():
+        for record in records:
             text = (
                 record.code() + " " +
                 record.resource_name + " " +
@@ -270,50 +277,25 @@ class ResourceManager:
                 record.date_added + " " +
                 record.condition + " " +
                 record.status + " " +
-                record.remarks
+                record.remarks + " " +
+                record.serial_number.lower() + " " +
+                str(record.quantity).lower()
             ).lower()
-
-            if isinstance(record, Facility):
-                text += (
-                    " " + record.location.lower() +
-                    " " + str(record.capacity).lower()
-                )
-            else:
-                text += (
-                    " " + record.serial_number.lower() +
-                    " " + str(record.quantity).lower()
-                )
 
             if keyword in text:
                 result.append(record)
 
         return result
 
-    def filter_type(self, records, record_type):
-        if record_type == "All":
-            return records
-
-        result = []
-
-        for record in records:
-            if record.record_type() == record_type:
-                result.append(record)
-
-        return result
-
     def update_record(self, record_id, values):
-        """Update every field of the selected record."""
+        """Update every field of the selected equipment record."""
         old_record = self.get(record_id)
 
         if old_record is None:
             raise InvalidRecordError("Record not found.")
 
-        # Reuse the class constructors so all validation is checked again.
-        if isinstance(old_record, Facility):
-            updated_record = Facility(*values)
-        else:
-            updated_record = Equipment(*values)
-
+        # Reuse the class constructor so all validation is checked again.
+        updated_record = Equipment(*values)
 
         updated_record._record_id = record_id
         self._records[record_id] = updated_record
@@ -325,20 +307,24 @@ class ResourceManager:
             raise
 
     def delete(self, record_id):
-        if record_id in self._records:
-            deleted_record = self._records.pop(record_id)
+        record = self._records.get(record_id)
 
-            try:
-                self.save_file()
-            except InvalidRecordError:
-                self._records[record_id] = deleted_record
-                raise
-        else:
+        if record is None or isinstance(record, Facility):
             raise InvalidRecordError("Record not found.")
+
+        deleted_record = self._records.pop(record_id)
+
+        try:
+            self.save_file()
+        except InvalidRecordError:
+            self._records[record_id] = deleted_record
+            raise
 
     def save_file(self):
         records = []
 
+        # Facility records are included so they round-trip untouched -
+        # this module never edits them, it just avoids losing them.
         for record in self._records.values():
             records.append(record.to_dict())
 
@@ -401,6 +387,8 @@ class ResourceManager:
                     raise InvalidRecordError("Record is not a JSON object.")
 
                 if item["type"] == "Facility":
+                    # Loaded only so it can be preserved on save - not
+                    # managed or displayed by this module.
                     record = Facility(
                         item["resource_name"],
                         item["resource_type"],
@@ -449,7 +437,7 @@ class ResourceManager:
         for condition in CONDITIONS:
             summary[condition] = 0
 
-        for record in self._records.values():
+        for record in self.get_equipment():
             summary[record.condition] += 1
 
         return summary
@@ -460,37 +448,28 @@ class ResourceManager:
         for status in STATUSES:
             summary[status] = 0
 
-        for record in self._records.values():
+        for record in self.get_equipment():
             summary[record.status] += 1
 
         return summary
 
     def detailed_report(self):
-        """Calculate facility and equipment inventory statistics."""
-        facility_count = 0
+        """Calculate equipment inventory statistics."""
         equipment_count = 0
-        total_capacity = 0
         total_quantity = 0
         resource_types = {}
 
-        for resource_type in FACILITY_TYPES + EQUIPMENT_TYPES:
+        for resource_type in EQUIPMENT_TYPES:
             resource_types[resource_type] = 0
 
-        for record in self._records.values():
+        for record in self.get_equipment():
             resource_types[record.resource_type] += 1
-
-            if isinstance(record, Facility):
-                facility_count += 1
-                total_capacity += record.capacity
-            else:
-                equipment_count += 1
-                total_quantity += record.quantity
+            equipment_count += 1
+            total_quantity += record.quantity
 
         return {
-            "total_records": len(self._records),
-            "facility_count": facility_count,
+            "total_records": equipment_count,
             "equipment_count": equipment_count,
-            "total_capacity": total_capacity,
             "total_quantity": total_quantity,
             "resource_types": resource_types
         }
@@ -502,26 +481,19 @@ class ResourceManager:
 
                 writer.writerow([
                     "ID", "Type", "Resource Name", "Resource Type",
-                    "Date Added", "Location/Serial", "Capacity/Quantity",
+                    "Date Added", "Serial Number", "Quantity",
                     "Condition", "Status", "Remarks"
                 ])
 
-                for record in self._records.values():
-                    if isinstance(record, Facility):
-                        location_or_serial = record.location
-                        capacity_or_quantity = record.capacity
-                    else:
-                        location_or_serial = record.serial_number
-                        capacity_or_quantity = record.quantity
-
+                for record in self.get_equipment():
                     writer.writerow([
                         record.code(),
                         record.record_type(),
                         record.resource_name,
                         record.resource_type,
                         record.date_added,
-                        location_or_serial,
-                        capacity_or_quantity,
+                        record.serial_number,
+                        record.quantity,
                         record.condition,
                         record.status,
                         record.remarks
@@ -541,7 +513,6 @@ class FacilityResourceManagementFrame(ttk.Frame):
         self.selected_record = None
 
         # Store the current choices from the filter window.
-        self.filter_type_var = tk.StringVar(value="All")
         self.filter_resource_type_var = tk.StringVar(value="All")
         self.filter_condition_var = tk.StringVar(value="All")
         self.filter_status_var = tk.StringVar(value="All")
@@ -572,7 +543,7 @@ class FacilityResourceManagementFrame(ttk.Frame):
         ).pack(side="left", padx=(5, 20))
         ttk.Label(
             self,
-            text="Facility & Resource Management",
+            text="Equipment Management",
             font=("Arial", 16, "bold")
         ).pack(pady=10)
 
@@ -581,7 +552,6 @@ class FacilityResourceManagementFrame(ttk.Frame):
         button_frame.pack(fill="x", pady=5)
 
         buttons = [
-            ("Add Facility", self.add_facility_form),
             ("Add Equipment", self.add_equipment_form),
             ("Delete", self.delete_selected),
             ("Report", self.show_detailed_report),
@@ -641,7 +611,7 @@ class FacilityResourceManagementFrame(ttk.Frame):
 
         columns = (
             "id", "type", "name", "resource_type", "date_added",
-            "detail", "capacity_qty", "condition", "status"
+            "serial", "quantity", "condition", "status"
         )
 
         self.tree = ttk.Treeview(
@@ -653,7 +623,7 @@ class FacilityResourceManagementFrame(ttk.Frame):
 
         headings = (
             "ID", "Type", "Resource Name", "Resource Type", "Date Added",
-            "Location / Serial", "Capacity / Qty",
+            "Serial Number", "Quantity",
             "Condition", "Status"
         )
 
@@ -695,11 +665,10 @@ class FacilityResourceManagementFrame(ttk.Frame):
     def refresh_table(self):
         self.search_var.set("")
         self.clear_filter_values()
-        self.show_records(self.manager.get_all())
+        self.show_records(self.manager.get_equipment())
 
     def clear_filter_values(self):
         """Reset all choices in the filter window."""
-        self.filter_type_var.set("All")
         self.filter_resource_type_var.set("All")
         self.filter_condition_var.set("All")
         self.filter_status_var.set("All")
@@ -713,7 +682,6 @@ class FacilityResourceManagementFrame(ttk.Frame):
         window.transient(self.winfo_toplevel())
         window.grab_set()
 
-        type_var = tk.StringVar(value=self.filter_type_var.get())
         resource_type_var = tk.StringVar(value=self.filter_resource_type_var.get())
         condition_var = tk.StringVar(value=self.filter_condition_var.get())
         status_var = tk.StringVar(value=self.filter_status_var.get())
@@ -725,7 +693,6 @@ class FacilityResourceManagementFrame(ttk.Frame):
         ).grid(row=0, column=0, columnspan=2, padx=15, pady=(15, 10))
 
         labels = (
-            "Filter Type",
             "Resource Type",
             "Condition",
             "Status"
@@ -736,17 +703,8 @@ class FacilityResourceManagementFrame(ttk.Frame):
                 row=row, column=0, padx=15, pady=6, sticky="w"
             )
 
-        type_combo = ttk.Combobox(
-            window,
-            textvariable=type_var,
-            values=("All", "Facility", "Equipment"),
-            state="readonly",
-            width=24
-        )
-        type_combo.grid(row=1, column=1, padx=15, pady=6)
-
         used_types = sorted({
-            record.resource_type for record in self.manager.get_all()
+            record.resource_type for record in self.manager.get_equipment()
         })
         if resource_type_var.get() not in used_types:
             resource_type_var.set("All")
@@ -758,7 +716,7 @@ class FacilityResourceManagementFrame(ttk.Frame):
             state="readonly",
             width=24
         )
-        resource_type_combo.grid(row=2, column=1, padx=15, pady=6)
+        resource_type_combo.grid(row=1, column=1, padx=15, pady=6)
 
         condition_combo = ttk.Combobox(
             window,
@@ -767,7 +725,7 @@ class FacilityResourceManagementFrame(ttk.Frame):
             state="readonly",
             width=24
         )
-        condition_combo.grid(row=3, column=1, padx=15, pady=6)
+        condition_combo.grid(row=2, column=1, padx=15, pady=6)
 
         status_combo = ttk.Combobox(
             window,
@@ -776,10 +734,9 @@ class FacilityResourceManagementFrame(ttk.Frame):
             state="readonly",
             width=24
         )
-        status_combo.grid(row=4, column=1, padx=15, pady=6)
+        status_combo.grid(row=3, column=1, padx=15, pady=6)
 
         def apply_and_close():
-            self.filter_type_var.set(type_var.get())
             self.filter_resource_type_var.set(resource_type_var.get())
             self.filter_condition_var.set(condition_var.get())
             self.filter_status_var.set(status_var.get())
@@ -792,7 +749,7 @@ class FacilityResourceManagementFrame(ttk.Frame):
             window.destroy()
 
         button_frame = ttk.Frame(window)
-        button_frame.grid(row=5, column=0, columnspan=2, pady=15)
+        button_frame.grid(row=4, column=0, columnspan=2, pady=15)
 
         ttk.Button(
             button_frame,
@@ -813,17 +770,10 @@ class FacilityResourceManagementFrame(ttk.Frame):
         ).pack(side="left", padx=4)
 
         window.bind("<Return>", lambda event: apply_and_close())
-        type_combo.focus_set()
+        resource_type_combo.focus_set()
 
     def apply_filter(self):
-        records = self.manager.search(
-            self.search_var.get()
-        )
-
-        records = self.manager.filter_type(
-            records,
-            self.filter_type_var.get()
-        )
+        records = self.manager.search(self.search_var.get())
 
         resource_type = self.filter_resource_type_var.get()
         condition = self.filter_condition_var.get()
@@ -849,7 +799,6 @@ class FacilityResourceManagementFrame(ttk.Frame):
 
         active_filters = []
         for name, value in (
-            ("Type", self.filter_type_var.get()),
             ("Resource Type", resource_type),
             ("Condition", condition),
             ("Status", status)
@@ -878,13 +827,6 @@ class FacilityResourceManagementFrame(ttk.Frame):
             self.tree.delete(item)
 
         for record in records:
-            if isinstance(record, Facility):
-                detail = record.location
-                capacity_qty = record.capacity
-            else:
-                detail = record.serial_number or "-"
-                capacity_qty = record.quantity
-
             self.tree.insert(
                 "",
                 "end",
@@ -895,8 +837,8 @@ class FacilityResourceManagementFrame(ttk.Frame):
                     record.resource_name,
                     record.resource_type,
                     record.date_added,
-                    detail,
-                    capacity_qty,
+                    record.serial_number or "-",
+                    record.quantity,
                     record.condition,
                     record.status
                 )
@@ -916,7 +858,7 @@ class FacilityResourceManagementFrame(ttk.Frame):
                     sort_value = (match.group(1), int(match.group(2)))
                 else:
                     sort_value = (value.lower(), 0)
-            elif column == "capacity_qty":
+            elif column == "quantity":
                 number_match = re.match(r"^(\d+)", value)
                 if number_match:
                     sort_value = (0, int(number_match.group(1)))
@@ -951,45 +893,20 @@ class FacilityResourceManagementFrame(ttk.Frame):
         record = self.manager.get(int(selected[0]))
         self.selected_record = record
 
-        if isinstance(record, Facility):
-            text = (
-                f"{record.code()} | {record.resource_name} | "
-                f"{record.resource_type} | Added: {record.date_added} | "
-                f"Location: {record.location} | "
-                f"Capacity: {record.capacity} | "
-                f"Condition: {record.condition} | "
-                f"Status: {record.status} | "
-                f"Remarks: {record.remarks or '-'}"
-            )
-        else:
-            text = (
-                f"{record.code()} | {record.resource_name} | "
-                f"{record.resource_type} | Added: {record.date_added} | "
-                f"Serial: {record.serial_number or '-'} | "
-                f"Quantity: {record.quantity} | "
-                f"Condition: {record.condition} | "
-                f"Status: {record.status} | "
-                f"Remarks: {record.remarks or '-'}"
-            )
+        if record is None:
+            return
+
+        text = (
+            f"{record.code()} | {record.resource_name} | "
+            f"{record.resource_type} | Added: {record.date_added} | "
+            f"Serial: {record.serial_number or '-'} | "
+            f"Quantity: {record.quantity} | "
+            f"Condition: {record.condition} | "
+            f"Status: {record.status} | "
+            f"Remarks: {record.remarks or '-'}"
+        )
 
         self.detail_var.set(text)
-
-
-    def add_facility_form(self):
-        self.create_form(
-            "Add Facility",
-            [
-                ("Facility Name", None),
-                ("Facility Type", FACILITY_TYPES),
-                ("Date Added (YYYY-MM-DD)", None),
-                ("Location", None),
-                ("Capacity", None),
-                ("Condition", CONDITIONS),
-                ("Status", STATUSES),
-                ("Remarks", None)
-            ],
-            self.manager.add_facility
-        )
 
     def add_equipment_form(self):
         self.create_form(
@@ -1066,9 +983,9 @@ class FacilityResourceManagementFrame(ttk.Frame):
                     str(error)
                 )
 
-                widgets[self.field_index_for_error(str(error))].focus_set()
-
                 wrong_index = self.field_index_for_error(str(error))
+                widgets[wrong_index].focus_set()
+
                 if isinstance(widgets[wrong_index], ttk.Entry):
                     widgets[wrong_index].selection_range(0, tk.END)
 
@@ -1092,21 +1009,19 @@ class FacilityResourceManagementFrame(ttk.Frame):
     def field_index_for_error(self, error_message):
         """Map a validation error message to its form field position.
 
-        Both the Facility and Equipment forms share the same layout:
-        0 Name, 1 Resource Type, 2 Date Added, 3 Location/Serial,
-        4 Capacity/Quantity, 5 Condition, 6 Status, 7 Remarks.
+        The Equipment form layout is: 0 Name, 1 Resource Type, 2 Date
+        Added, 3 Serial Number, 4 Quantity, 5 Condition, 6 Status,
+        7 Remarks.
         """
         error_message = error_message.lower()
 
         if "resource name" in error_message:
             return 0
-        elif "facility type" in error_message or "equipment type" in error_message:
+        elif "equipment type" in error_message:
             return 1
         elif "date added" in error_message:
             return 2
-        elif "location" in error_message:
-            return 3
-        elif "capacity" in error_message or "quantity" in error_message:
+        elif "quantity" in error_message:
             return 4
         elif "condition" in error_message:
             return 5
@@ -1116,7 +1031,7 @@ class FacilityResourceManagementFrame(ttk.Frame):
             return 0
 
     def edit_selected(self):
-        """Edit all information of the selected record."""
+        """Edit all information of the selected equipment record."""
         record = self.selected_record
 
         if record is None:
@@ -1132,28 +1047,16 @@ class FacilityResourceManagementFrame(ttk.Frame):
         variables = []
         widgets = []
 
-        if isinstance(record, Facility):
-            fields = [
-                ("Facility Name", None, record.resource_name),
-                ("Facility Type", FACILITY_TYPES, record.resource_type),
-                ("Date Added (YYYY-MM-DD)", None, record.date_added),
-                ("Location", None, record.location),
-                ("Capacity", None, str(record.capacity)),
-                ("Condition", CONDITIONS, record.condition),
-                ("Status", STATUSES, record.status),
-                ("Remarks", None, record.remarks)
-            ]
-        else:
-            fields = [
-                ("Equipment Name", None, record.resource_name),
-                ("Equipment Type", EQUIPMENT_TYPES, record.resource_type),
-                ("Date Added (YYYY-MM-DD)", None, record.date_added),
-                ("Serial Number", None, record.serial_number),
-                ("Quantity", None, str(record.quantity)),
-                ("Condition", CONDITIONS, record.condition),
-                ("Status", STATUSES, record.status),
-                ("Remarks", None, record.remarks)
-            ]
+        fields = [
+            ("Equipment Name", None, record.resource_name),
+            ("Equipment Type", EQUIPMENT_TYPES, record.resource_type),
+            ("Date Added (YYYY-MM-DD)", None, record.date_added),
+            ("Serial Number", None, record.serial_number),
+            ("Quantity", None, str(record.quantity)),
+            ("Condition", CONDITIONS, record.condition),
+            ("Status", STATUSES, record.status),
+            ("Remarks", None, record.remarks)
+        ]
 
         for row, (label_text, choices, current_value) in enumerate(fields):
             ttk.Label(
@@ -1261,28 +1164,29 @@ class FacilityResourceManagementFrame(ttk.Frame):
             "Delete",
             "Are you sure you want to delete this record?"
         ):
-            self.manager.delete(int(selected[0]))
+            try:
+                self.manager.delete(int(selected[0]))
+            except InvalidRecordError as error:
+                messagebox.showerror("Error", str(error))
+                return
+
             self.selected_record = None
             self.detail_var.set(
                 "Select a record to view details."
             )
             self.refresh_table()
 
-
     def show_detailed_report(self):
-        """Display complete facility and equipment inventory statistics."""
+        """Display complete equipment inventory statistics."""
         report = self.manager.detailed_report()
         condition_counts = self.manager.condition_summary()
         status_counts = self.manager.status_summary()
 
         lines = [
-            "FACILITY & RESOURCE MANAGEMENT REPORT",
+            "EQUIPMENT INVENTORY REPORT",
             "=" * 54,
             "",
-            f"Total Records: {report['total_records']}",
-            f"Total Facilities: {report['facility_count']}",
             f"Total Equipment Items: {report['equipment_count']}",
-            f"Total Facility Capacity: {report['total_capacity']}",
             f"Total Equipment Quantity: {report['total_quantity']}",
             "",
             "RESOURCE TYPE SUMMARY",
@@ -1336,7 +1240,7 @@ class FacilityResourceManagementFrame(ttk.Frame):
         path = filedialog.asksaveasfilename(
             defaultextension=".csv",
             filetypes=[("CSV File", "*.csv")],
-            initialfile="resource_records.csv"
+            initialfile="equipment_records.csv"
         )
 
         if path == "":
