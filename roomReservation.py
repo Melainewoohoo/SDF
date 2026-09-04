@@ -47,22 +47,42 @@ def Save_Reservations(reservations):
     with open(RESERVATION_FILE, "w", encoding="utf-8") as file:
         json.dump(reservations, file, indent=4)
 
-def Load_Active_Facilities():
-    # Read facility_file.json.
+def Load_Facilities():
+    # Read all facility names and statuses from facility_file.json.
     try:
         with open(FACILITY_FILE, "r", encoding="utf-8") as file:
             facility_data = json.load(file)
     except (FileNotFoundError, OSError, json.JSONDecodeError):
         return []
 
-    active_facilities = []
+    facilities = []
     for record in facility_data.get("records", []):
-        if record.get("type") == "Facility" and record.get("status") == "Active":
-            facility_name = record.get("resource_type", "").strip()
+        if record.get("type") == "Facility":
+            facility_name = record.get("resource_name", "").strip()
             if facility_name != "":
-                active_facilities.append(facility_name)
+                facilities.append({
+                    "name": facility_name,
+                    "status": record.get("status", "Unknown")
+                })
+
+    return facilities
+
+
+def Load_Active_Facilities():
+    active_facilities = []
+    for facility in Load_Facilities():
+        if facility["status"] == "Active":
+            active_facilities.append(facility["name"])
 
     return active_facilities
+
+
+def Get_Facility_Status(facility_name):
+    for facility in Load_Facilities():
+        if facility["name"] == facility_name:
+            return facility["status"]
+
+    return "Unknown"
 
 #-----------------------------------------------DISPLAY RESERVE VENUE PAGE BUTTON-----------------------------
 def booking_page(window, student_data, back_command):
@@ -88,11 +108,16 @@ def booking_page(window, student_data, back_command):
         booking_date = date.today() + timedelta(days=offset) #timedelta represent a number of days
         available_dates.append(booking_date.strftime("%Y-%m-%d"))
 
-    active_rooms = Load_Active_Facilities()
-    if len(active_rooms) == 0:      #returns the number of room in the list
-        active_rooms = ["No active facilities"]
+    facilities = Load_Facilities()
+    room_names = []
+    for facility in facilities:
+        room_names.append(facility["name"])
 
-    room_var = StringVar(window, value=active_rooms[0])
+    if len(room_names) == 0:
+        room_names = ["No facilities found"]
+
+    room_var = StringVar(window, value=room_names[0])
+    room_status_var = StringVar(window, value="Status: " + Get_Facility_Status(room_names[0]))
     date_var = StringVar(window, value="All Dates")
     pax_var = StringVar(window, value="1")
     agreed_var = IntVar(window, value=0)
@@ -100,7 +125,14 @@ def booking_page(window, student_data, back_command):
 
     Label(form, text="Venue", bg="#f7f9fc",
           font=("Microsoft YaHei UI Light", 10, "bold")).place(x=15, y=15)
-    OptionMenu(form, room_var, *active_rooms).place(x=70, y=10, width=205)
+
+    def Display_Room_Status(selected_room):
+        room_status_var.set("Status: " + Get_Facility_Status(selected_room))
+
+    OptionMenu(form, room_var, *room_names,
+               command=Display_Room_Status).place(x=70, y=10, width=205)
+    Label(form, textvariable=room_status_var, bg="#f7f9fc", fg="#d9534f",
+          font=("Microsoft YaHei UI Light", 10, "bold")).place(x=285, y=15)
 
     Label(form, text="Date", bg="#f7f9fc",
           font=("Microsoft YaHei UI Light", 10, "bold")).place(x=15, y=50)
@@ -161,19 +193,22 @@ def booking_page(window, student_data, back_command):
                 variable=agreed_var, bg="#f7f9fc",
                 font=("Microsoft YaHei UI Light", 9)).place(x=455, y=295)
 
-    def search_available_slots():
+    def search_available_slots(): # room status = inactive
         available_list.delete(0, END)
         selected_room = room_var.get()
         selected_date = date_var.get()
         reservations = Load_Reservations()
 
-        if selected_room == "No active facilities":
-            available_list.insert(END, "No active facilities are available for booking.")
+        if selected_room == "No facilities found":
+            available_list.insert(END, "No facilities were found in the facility file.")
             return
 
-        # Check the shared file again in case staff changed the status.
-        if selected_room not in Load_Active_Facilities():
-            available_list.insert(END, "This facility is no longer active.")
+        current_status = Get_Facility_Status(selected_room)
+        room_status_var.set("Status: " + current_status)
+        if current_status != "Active":
+            available_list.insert(
+                END, "This facility is " + current_status + " and cannot be booked."
+            )
             return
 
         for booking_date in available_dates:
@@ -205,9 +240,9 @@ def booking_page(window, student_data, back_command):
 
     def submit_reservation():
         selected = available_list.curselection()
-        if (not selected
-                or available_list.get(selected[0]).startswith("No available")
-                or available_list.get(selected[0]).startswith("No active")
+        if (not selected    #return true if selected begins with no availble
+                or available_list.get(selected[0]).startswith("No available")  
+                or available_list.get(selected[0]).startswith("No facilities")
                 or available_list.get(selected[0]).startswith("This facility")):
             messagebox.showerror("No Selection", "Please select an available date and time.")
             return
@@ -283,9 +318,8 @@ def booking_page(window, student_data, back_command):
     ShowMemberFields("1")
     search_available_slots()
 
-
+#-----------------------------------------------MY BOOKING PAGE------------------------------------------
 def booking_history_page(window, student_data, back_command):
-    # Show reservations belonging to the currently logged-in student.
     for widget in window.winfo_children():
         widget.destroy()
 
@@ -449,10 +483,12 @@ def booking_history_page(window, student_data, back_command):
         if not confirm_cancel:
             return
 
+        # removes one selected booking 
         reservations = Load_Reservations()
-        updated_reservations = []
+        updated_reservations = []       #contains all bookings
         booking_removed = False
         for reservation in reservations:
+            # the booking is removed by not adding to updated_reservation
             if not booking_removed and booking_matches(reservation, selected_booking):
                 booking_removed = True
             else:
