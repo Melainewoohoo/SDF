@@ -9,11 +9,16 @@ from tkinter import ttk, messagebox, filedialog
 
 APP_FOLDER = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(APP_FOLDER, "facility_records.json")
+FACILITY_FILE = os.path.join(APP_FOLDER, "facility_file.json")
+RESERVATION_FILE = os.path.join(APP_FOLDER, "room_reservations.json")
 
 CONDITIONS = ("Good", "Fair", "Poor", "Under Repair")
 MAINTENANCE_STATUS = ("Not Required", "Scheduled", "Completed", "Overdue")
 FACILITY_TYPES = ("Classroom", "Lecture Hall", "Lab", "Gym",
-                  "Court", "Pool", "Field", "Equipment")
+                  "Court", "Pool", "Field")
+EQUIPMENT_TYPES = ("Projector", "Laptop", "Lab Instrument",
+                   "Sports Equipment", "Other")
+RESOURCE_TYPES = FACILITY_TYPES + EQUIPMENT_TYPES
 
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -35,9 +40,79 @@ def validate_date(value, field_name="Date"):
 class InvalidRecordError(Exception):
     pass
 
-# ============================================================
+def load_shared_facilities(usage_only=False):
+    """Load facilities from the shared facility_file.json."""
+    if not os.path.exists(FACILITY_FILE):
+        raise InvalidRecordError(
+            "Shared facility file (facility_file.json) was not found."
+        )
+
+    try:
+        with open(FACILITY_FILE, "r", encoding="utf-8") as file:
+            data = json.load(file)
+
+    except OSError:
+        raise InvalidRecordError(
+            "Cannot open the shared facility file."
+        )
+
+    except json.JSONDecodeError:
+        raise InvalidRecordError(
+            "The shared facility file contains invalid JSON."
+        )
+
+    if (
+        not isinstance(data, dict)
+        or not isinstance(data.get("records"), list)
+    ):
+        raise InvalidRecordError(
+            "The shared facility file has an unsupported structure."
+        )
+
+    facilities = []
+
+    for item in data["records"]:
+
+        if not isinstance(item, dict):
+            continue
+
+        resource_kind = item.get("type")
+
+        # Usage records are for facilities only. Maintenance can be
+        # recorded for both facilities and equipment from the shared file.
+        if usage_only and resource_kind != "Facility":
+            continue
+        if not usage_only and resource_kind not in ("Facility", "Equipment"):
+            continue
+
+        name = str(
+            item.get("resource_name", "")
+        ).strip()
+
+        facility_type = str(
+            item.get("resource_type", "")
+        ).strip()
+
+        status = str(
+            item.get("status", "")
+        ).strip().title()
+
+        if name == "" or facility_type == "":
+            continue
+
+        # Usage only allows Active facilities
+        if usage_only and status != "Active":
+            continue
+
+        # Maintenance does not allow retired facilities
+        if not usage_only and status == "Retired":
+            continue
+
+        facilities.append(item)
+
+    return facilities
+
 # Parent Class
-# ============================================================
 class FacilityRecord:
     next_id = 1
 
@@ -49,8 +124,8 @@ class FacilityRecord:
         self.date = date
         self.remarks = remarks.strip()
 
-        if self.facility_type not in FACILITY_TYPES:
-            raise InvalidRecordError("Invalid facility type.")
+        if self.facility_type not in RESOURCE_TYPES:
+            raise InvalidRecordError("Invalid facility or equipment type.")
 
     @property
     def record_id(self):
@@ -104,13 +179,12 @@ class FacilityRecord:
         }
 
 
-# ============================================================
 # Child Class 1 - Usage Log
-# ============================================================
 class UsageLog(FacilityRecord):
 
     def __init__(self, facility_name, facility_type, date,
-                 user_name, purpose, duration, remarks=""):
+                 user_name, purpose, duration, remarks="",
+                 source_booking_key=""):
 
         super().__init__(facility_name, facility_type, date, remarks)
 
@@ -135,6 +209,7 @@ class UsageLog(FacilityRecord):
         self.user_name = user_name.strip()
         self.purpose = purpose.strip()
         self.duration = duration
+        self.source_booking_key = source_booking_key.strip()
 
     def record_type(self):
         return "Usage Log"
@@ -149,11 +224,12 @@ class UsageLog(FacilityRecord):
         data["purpose"] = self.purpose
         data["duration"] = self.duration
 
+        if self.source_booking_key != "":
+            data["source_booking_key"] = self.source_booking_key
+
         return data
 
-# ============================================================
 # Child Class 2 - Maintenance Record
-# ============================================================
 class MaintenanceRecord(FacilityRecord):
 
     def __init__(self, facility_name, facility_type, date,
@@ -215,9 +291,7 @@ class MaintenanceRecord(FacilityRecord):
 
         return data
 
-# ============================================================
 # Manager Class
-# ============================================================
 class FacilityManager:
     """
     Manage facility usage and maintenance records.
@@ -232,6 +306,8 @@ class FacilityManager:
         FacilityRecord.next_id = 1
 
         self.load_file()
+        self.update_next_id()
+        self.sync_checked_out_bookings()
         self.update_next_id()
 
     def update_next_id(self):
@@ -249,6 +325,202 @@ class FacilityManager:
 
         record._record_id = FacilityRecord.next_id
         FacilityRecord.next_id += 1
+
+
+    def _shared_facility_lookup(self):
+        """Return every facility in the shared facility file by name."""
+        if not os.path.exists(FACILITY_FILE):
+            return {}
+
+        try:
+            with open(FACILITY_FILE, "r", encoding="utf-8") as file:
+                data = json.load(file)
+        except (OSError, json.JSONDecodeError):
+            return {}
+
+        lookup = {}
+        for item in data.get("records", []):
+            if not isinstance(item, dict):
+                continue
+            if item.get("type") != "Facility":
+                continue
+
+            name = str(item.get("resource_name", "")).strip()
+            if name != "":
+                lookup[name] = item
+
+        return lookup
+
+    @staticmethod
+    def _booking_key(booking):
+        """Build a stable key so one checked-out booking is imported once."""
+        parts = (
+            booking.get("student_id", ""),
+            booking.get("room", ""),
+            booking.get("booking_date", ""),
+            booking.get("start_time", ""),
+            booking.get("end_time", "")
+        )
+        return "|".join(str(part).strip() for part in parts)
+
+    @staticmethod
+    def _booking_duration(start_time, end_time):
+        """Convert HH:MM booking times into duration in hours."""
+        try:
+            start = datetime.strptime(start_time, "%H:%M")
+            end = datetime.strptime(end_time, "%H:%M")
+        except (TypeError, ValueError):
+            return None
+
+        hours = (end - start).total_seconds() / 3600
+        if hours <= 0 or hours > 24:
+            return None
+        return hours
+
+    def sync_checked_out_bookings(self):
+        """Import checked-out reservations as usage logs without duplicates."""
+        if not os.path.exists(RESERVATION_FILE):
+            return 0
+
+        try:
+            with open(RESERVATION_FILE, "r", encoding="utf-8") as file:
+                bookings = json.load(file)
+        except (OSError, json.JSONDecodeError):
+            return 0
+
+        if not isinstance(bookings, list):
+            return 0
+
+        existing_keys = {
+            record.source_booking_key
+            for record in self._records.values()
+            if isinstance(record, UsageLog)
+            and record.source_booking_key != ""
+        }
+
+        facilities = self._shared_facility_lookup()
+        added = 0
+
+        for booking in bookings:
+            if not isinstance(booking, dict):
+                continue
+            if booking.get("status") != "Checked Out":
+                continue
+
+            booking_key = self._booking_key(booking)
+            if booking_key == "||||" or booking_key in existing_keys:
+                continue
+
+            facility_name = str(booking.get("room", "")).strip()
+            facility = facilities.get(facility_name)
+            if facility is None:
+                continue
+
+            facility_type = str(facility.get("resource_type", "")).strip()
+            if facility_type not in FACILITY_TYPES:
+                continue
+
+            booking_date = str(booking.get("booking_date", "")).strip()
+            user_name = str(booking.get("student_name", "")).strip()
+            if user_name == "":
+                user_name = str(booking.get("student_id", "")).strip()
+
+            duration = self._booking_duration(
+                booking.get("start_time"),
+                booking.get("end_time")
+            )
+            if duration is None:
+                continue
+
+            purpose = "Reservation usage"
+            remarks = (
+                f"Imported from checked-out booking "
+                f"({booking.get('start_time', '-')}-{booking.get('end_time', '-')})"
+            )
+
+            try:
+                record = UsageLog(
+                    facility_name,
+                    facility_type,
+                    booking_date,
+                    user_name,
+                    purpose,
+                    duration,
+                    remarks,
+                    booking_key
+                )
+            except InvalidRecordError:
+                continue
+
+            self.assign_new_id(record)
+            self._records[record.record_id] = record
+            existing_keys.add(booking_key)
+            added += 1
+
+        if added > 0:
+            self.save_file()
+
+        return added
+
+    def update_shared_facility_from_maintenance(self, record):
+        """Synchronize maintenance condition/status to facility_file.json."""
+        if not isinstance(record, MaintenanceRecord):
+            return
+
+        if not os.path.exists(FACILITY_FILE):
+            raise InvalidRecordError(
+                "Shared facility file (facility_file.json) was not found."
+            )
+
+        try:
+            with open(FACILITY_FILE, "r", encoding="utf-8") as file:
+                data = json.load(file)
+        except OSError:
+            raise InvalidRecordError("Cannot open the shared facility file.")
+        except json.JSONDecodeError:
+            raise InvalidRecordError(
+                "The shared facility file contains invalid JSON."
+            )
+
+        changed = False
+        for facility in data.get("records", []):
+            if not isinstance(facility, dict):
+                continue
+            if facility.get("type") not in ("Facility", "Equipment"):
+                continue
+            if facility.get("resource_name") != record.facility_name:
+                continue
+
+            facility["condition"] = record.condition
+
+            if (
+                record.maintenance_status in ("Scheduled", "Overdue")
+                or record.condition == "Under Repair"
+            ):
+                facility["status"] = "Inactive"
+            elif record.maintenance_status == "Completed":
+                facility["status"] = "Active"
+
+            changed = True
+            break
+
+        if not changed:
+            raise InvalidRecordError(
+                "The selected facility no longer exists in the shared facility file."
+            )
+
+        temporary_file = FACILITY_FILE + ".tmp"
+        try:
+            with open(temporary_file, "w", encoding="utf-8") as file:
+                json.dump(data, file, indent=2)
+            os.replace(temporary_file, FACILITY_FILE)
+        except OSError:
+            if os.path.exists(temporary_file):
+                try:
+                    os.remove(temporary_file)
+                except OSError:
+                    pass
+            raise InvalidRecordError("Cannot update the shared facility file.")
 
     # CREATE
     def add_usage(self, values):
@@ -272,9 +544,11 @@ class FacilityManager:
 
         try:
             self.save_file()
+            self.update_shared_facility_from_maintenance(record)
         except InvalidRecordError:
             del self._records[record.record_id]
             FacilityRecord.next_id = old_next_id
+            self.save_file()
             raise
 
     # READ
@@ -358,8 +632,11 @@ class FacilityManager:
 
         try:
             self.save_file()
+            if isinstance(updated_record, MaintenanceRecord):
+                self.update_shared_facility_from_maintenance(updated_record)
         except InvalidRecordError:
             self._records[record_id] = old_record
+            self.save_file()
             raise
 
     # DELETE
@@ -449,7 +726,8 @@ class FacilityManager:
                         item["user_name"],
                         item["purpose"],
                         item["duration"],
-                        item.get("remarks", "")
+                        item.get("remarks", ""),
+                        item.get("source_booking_key", "")
                     )
                 elif item["type"] == "Maintenance":
                     record = MaintenanceRecord(
@@ -491,7 +769,6 @@ class FacilityManager:
             with open(path, "w", newline="", encoding="utf-8") as file:
                 writer = csv.writer(file)
 
-                # Export each record field into a separate CSV column.
                 writer.writerow([
                     "ID", "Type", "Facility", "Facility Type", "Date",
                     "User/Technician", "Purpose", "Duration (hours)",
@@ -533,9 +810,7 @@ class FacilityManager:
         except OSError:
             raise InvalidRecordError("Cannot export CSV.")
 
-# ============================================================
 # GUI
-# ============================================================
 class FacilityUsageMaintenanceFrame(ttk.Frame):
 
     def __init__(self, parent, back_command=None):
@@ -566,7 +841,6 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
             )
 
     def create_widgets(self):
-        # Title row
         title_frame = ttk.Frame(self)
         title_frame.pack(fill="x", pady=10)
 
@@ -586,7 +860,6 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
             font=("Microsoft YaHei UI Light", 14, "bold")
         ).pack(side="top")
 
-        # Main buttons
         button_frame = ttk.Frame(self)
         button_frame.pack(fill="x", pady=5)
         
@@ -605,7 +878,6 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
                 command=command
             ).pack(side="left", padx=3)
 
-        # Search
         search_frame = ttk.Frame(self)
         search_frame.pack(fill="x", pady=8)
 
@@ -649,7 +921,6 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
             command=self.refresh_table
         ).pack(side="left", padx=3)
 
-        # Record table
         columns = (
             "id", "type", "facility", "facility_type", "date",
             "person", "detail", "condition", "status"
@@ -686,7 +957,6 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
                 width=130
             )
 
-        # Vertical scrollbar
         scrollbar = ttk.Scrollbar(
             table_frame,
             orient="vertical",
@@ -713,7 +983,6 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
             self.select_record
         )
         
-        # Details
         detail_box = ttk.LabelFrame(self, text="Selected Record")
         detail_box.pack(fill="x", pady=8)
 
@@ -736,12 +1005,12 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
             command=self.edit_selected
         ).pack(side="left", padx=3)
 
-    # ------------------------------------------------------------
-    # Table
-    # ------------------------------------------------------------
     def refresh_table(self):
+        # Pull newly checked-out reservations into Usage automatically.
+        self.manager.sync_checked_out_bookings()
         self.search_var.set("")
         self.clear_filter_values()
+        self.manager.sync_checked_out_bookings()
         self.show_records(self.manager.get_all())
 
     def clear_filter_values(self):
@@ -1042,30 +1311,69 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
 
         self.detail_var.set(text)
 
-    # ------------------------------------------------------------
     # Add Forms
-    # ------------------------------------------------------------
     def add_usage_form(self):
+        try:
+            facilities = load_shared_facilities(
+                usage_only=True
+            )
+
+        except InvalidRecordError as error:
+            messagebox.showerror(
+                "Facility File Error",
+                str(error)
+            )
+            return
+
+        if not facilities:
+            messagebox.showwarning(
+                "No Active Facility",
+                "No active facility is available."
+            )
+            return
+
         self.create_form(
             "Add Usage Log",
             [
                 ("Facility Name", None),
-                ("Facility Type", FACILITY_TYPES),
+                ("Facility Type", None),
                 ("Date (YYYY-MM-DD)", None),
                 ("User Name", None),
                 ("Purpose", None),
                 ("Duration (hours)", None),
                 ("Remarks", None)
             ],
-            self.manager.add_usage
+            self.manager.add_usage,
+            shared_facilities=facilities
         )
 
+
     def add_maintenance_form(self):
+
+        try:
+            facilities = load_shared_facilities(
+                usage_only=False
+            )
+
+        except InvalidRecordError as error:
+            messagebox.showerror(
+                "Facility File Error",
+                str(error)
+            )
+            return
+
+        if not facilities:
+            messagebox.showwarning(
+                "No Facility",
+                "No facility is available for maintenance."
+            )
+            return
+
         self.create_form(
             "Add Maintenance Record",
             [
-                ("Facility Name", None),
-                ("Facility Type", FACILITY_TYPES),
+                ("Facility / Equipment Name", None),
+                ("Resource Type", None),
                 ("Date (YYYY-MM-DD)", None),
                 ("Condition", CONDITIONS),
                 ("Technician", None),
@@ -1073,30 +1381,87 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
                 ("Maintenance Status", MAINTENANCE_STATUS),
                 ("Remarks", None)
             ],
-            self.manager.add_maintenance
+            self.manager.add_maintenance,
+            shared_facilities=facilities
         )
 
-    def create_form(self, title, fields, save_function):
+    def create_form(
+        self,
+        title,
+        fields,
+        save_function,
+        shared_facilities=None
+    ):
         window = tk.Toplevel(self)
         window.title(title)
 
         variables = []
         widgets = []
+
+        facility_lookup = {}
+
+        if shared_facilities is not None:
+            facility_lookup = {
+                item["resource_name"]: item
+                for item in shared_facilities
+                if item.get("resource_name")
+            }
+
         for row, (label_text, choices) in enumerate(fields):
+
             ttk.Label(
                 window,
                 text=label_text
-            ).grid(row=row, column=0, padx=10, pady=5, sticky="w")
+            ).grid(
+                row=row,
+                column=0,
+                padx=10,
+                pady=5,
+                sticky="w"
+            )
 
             variable = tk.StringVar()
 
-            if choices is None:
+            # Facility Name
+            if shared_facilities is not None and row == 0:
+
+                facility_names = tuple(
+                    facility_lookup.keys()
+                )
+
+                widget = ttk.Combobox(
+                    window,
+                    textvariable=variable,
+                    values=facility_names,
+                    state="readonly",
+                    width=25
+                )
+
+                if facility_names:
+                    variable.set(
+                        facility_names[0]
+                    )
+
+            # Facility Type - automatically filled
+            elif shared_facilities is not None and row == 1:
+
+                widget = ttk.Entry(
+                    window,
+                    textvariable=variable,
+                    state="readonly",
+                    width=28
+                )
+
+            elif choices is None:
+
                 widget = ttk.Entry(
                     window,
                     textvariable=variable,
                     width=28
                 )
+
             else:
+
                 widget = ttk.Combobox(
                     window,
                     textvariable=variable,
@@ -1106,17 +1471,55 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
                 )
 
                 if len(choices) > 0:
-                    variable.set(choices[0])
+                    variable.set(
+                        choices[0]
+                    )
 
-            widget.grid(row=row, column=1, padx=10, pady=5)
+            widget.grid(
+                row=row,
+                column=1,
+                padx=10,
+                pady=5
+            )
+
             variables.append(variable)
             widgets.append(widget)
+
+        if shared_facilities is not None and facility_lookup:
+
+            def sync_facility_type(event=None):
+
+                selected = facility_lookup.get(
+                    variables[0].get()
+                )
+
+                if selected is None:
+                    variables[1].set("")
+                    return
+
+                variables[1].set(
+                    str(
+                        selected.get(
+                            "resource_type",
+                            ""
+                        )
+                    ).strip()
+                )
+
+            widgets[0].bind(
+                "<<ComboboxSelected>>",
+                sync_facility_type
+            )
+
+            sync_facility_type()
 
         def save():
             values = []
 
             for variable in variables:
-                values.append(variable.get())
+                values.append(
+                    variable.get()
+                )
 
             try:
                 save_function(values)
@@ -1130,18 +1533,23 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
                 )
 
             except InvalidRecordError as error:
+
                 messagebox.showerror(
                     "Invalid Input",
                     str(error)
                 )
 
-                error_message = str(error).lower()
+                error_message = str(
+                    error
+                ).lower()
 
-                # Find which input is wrong
                 if "facility name" in error_message:
                     wrong_index = 0
 
-                elif "date" in error_message and "next service" not in error_message:
+                elif (
+                    "date" in error_message
+                    and "next service" not in error_message
+                ):
                     wrong_index = 2
 
                 elif "user name" in error_message:
@@ -1171,14 +1579,21 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
                 else:
                     wrong_index = 0
 
-                # Return cursor to wrong input
-                widgets[wrong_index].focus_set()
+                widgets[
+                    wrong_index
+                ].focus_set()
 
-                # Highlight existing wrong value
-                if isinstance(widgets[wrong_index], ttk.Entry):
-                    widgets[wrong_index].selection_range(0, tk.END)
+                if isinstance(
+                    widgets[wrong_index],
+                    ttk.Entry
+                ):
+                    widgets[
+                        wrong_index
+                    ].selection_range(
+                        0,
+                        tk.END
+                    )
 
-        # Press Enter = Save
         window.bind(
             "<Return>",
             lambda event: save()
@@ -1195,9 +1610,7 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
             pady=10
         )
 
-    # ------------------------------------------------------------
     # Update / Delete
-    # ------------------------------------------------------------
     def edit_selected(self):
         """Edit all information of the selected record."""
         record = self.selected_record
@@ -1340,7 +1753,6 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
                 if isinstance(widgets[wrong_index], ttk.Entry):
                     widgets[wrong_index].selection_range(0, tk.END)
 
-        # Press Enter = Save
         window.bind(
             "<Return>",
             lambda event: save_changes()
@@ -1390,9 +1802,7 @@ class FacilityUsageMaintenanceFrame(ttk.Frame):
                     str(error)
                 )
 
-    # ------------------------------------------------------------
     # Export
-    # ------------------------------------------------------------
     def export_csv(self):
         path = filedialog.asksaveasfilename(
             defaultextension=".csv",

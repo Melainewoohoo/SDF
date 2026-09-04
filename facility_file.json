@@ -1,6 +1,6 @@
 {
   "next_ids": {
-    "record": 6
+    "record": 3
   },
   "records": [
     {
@@ -10,7 +10,7 @@
       "resource_type": "Lecture Hall",
       "date_added": "2026-08-31",
       "condition": "Good",
-      "status": "Inactive",
+      "status": "Retired",
       "remarks": "",
       "location": "near DK3",
       "capacity": 50
@@ -18,38 +18,14 @@
     {
       "type": "Facility",
       "record_id": 2,
-      "resource_name": "Q105",
-      "resource_type": "Classroom",
-      "date_added": "2026-09-04",
+      "resource_name": "DK3",
+      "resource_type": "Lecture Hall",
+      "date_added": "2026-08-31",
       "condition": "Good",
       "status": "Active",
       "remarks": "",
-      "location": "Block Q",
-      "capacity": 30
-    },
-    {
-      "type": "Facility",
-      "record_id": 4,
-      "resource_name": "JianXun Basement",
-      "resource_type": "Gym",
-      "date_added": "2026-09-03",
-      "condition": "Good",
-      "status": "Active",
-      "remarks": "",
-      "location": "Bukit Bintang",
-      "capacity": 10
-    },
-    {
-      "type": "Facility",
-      "record_id": 5,
-      "resource_name": "B101",
-      "resource_type": "Lab",
-      "date_added": "2026-09-01",
-      "condition": "Good",
-      "status": "Retired",
-      "remarks": "",
-      "location": "Block B",
-      "capacity": 30
+      "location": "near DK4",
+      "capacity": 50
     }
   ]
 }
