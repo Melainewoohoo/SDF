@@ -29,5 +29,16 @@
         "number_of_pax": 1,
         "members": [],
         "status": "Checked In"
+    },
+    {
+        "student_id": 2610161,
+        "student_name": "AhXun",
+        "room": "DK3",
+        "booking_date": "2026-09-09",
+        "start_time": "14:00",
+        "end_time": "15:00",
+        "number_of_pax": 1,
+        "members": [],
+        "status": "Checked Out"
     }
 ]
