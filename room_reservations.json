@@ -40,7 +40,8 @@
         "number_of_pax": 1,
         "members": [],
         "status": "Checked Out"
-
+    },
+    {
         "student_id": 2600827,
         "student_name": "Mely",
         "room": "B101",
