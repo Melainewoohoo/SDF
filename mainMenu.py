@@ -4,7 +4,6 @@ from tkinter import *
 from tkinter import messagebox
 import facility_resource_management
 import facility_usage_maintenance
-import manage_room
 from roomReservation import *
 
 try:
@@ -118,12 +117,12 @@ def student_menu(student_data):
     Label(frame, text="Welcome, {}".format(student_data["Name"]), fg="#57a1f8",
           bg="white", font=("Microsoft YaHei UI Light", 12, "bold")).place(x=30, y=60)
 
-    Button(frame, text="Reserve Room", font=("Microsoft YaHei UI Light", 11),
+    Button(frame, text="Reserve Venue", font=("Microsoft YaHei UI Light", 11),
            command=lambda: booking_page(
                window, student_data, lambda: student_menu(student_data)
            )).place(x=30, y=110)
 
-    Button(frame, text="Booking History", font=("Microsoft YaHei UI Light", 11),
+    Button(frame, text="My Booking", font=("Microsoft YaHei UI Light", 11),
            command=lambda: booking_history_page(
                window, student_data, lambda: student_menu(student_data)
            )).place(x=30, y=150)
@@ -186,14 +185,10 @@ def staff_menu(staff_data):
     Label(frame, text="Welcome, {}".format(staff_data["Name"]), fg="#57a1f8",
           bg="white", font=("Microsoft YaHei UI Light", 12, "bold")).place(x=30, y=60)
 
-    Button(frame, text="Manage Room", font=("Microsoft YaHei UI Light", 11),
-           command=lambda: manage_room.manage_room_page(
-               window, lambda: staff_menu(staff_data)
-           )).place(x=30, y=110)
     Button(frame, text="Facility Resource management", font=("Microsoft YaHei UI Light", 11),
-          command=lambda: open_facility_resource_management(staff_data)).place(x=30, y=150)
+          command=lambda: open_facility_resource_management(staff_data)).place(x=30, y=110)
     Button(frame, text="Facility Usage & Maintenance", font=("Microsoft YaHei UI Light", 11),
-          command=lambda: open_facility_usage_maintenance(staff_data)).place(x=30, y=190)
+          command=lambda: open_facility_usage_maintenance(staff_data)).place(x=30, y=150)
     Button(frame, text="Logout", font=("Microsoft YaHei UI Light", 11),
            command=main_menu).place(x=30, y=230)
 
