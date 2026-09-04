@@ -29,5 +29,16 @@
         "number_of_pax": 1,
         "members": [],
         "status": "Checked In"
+    },
+    {
+        "student_id": 2600827,
+        "student_name": "Mely",
+        "room": "B101",
+        "booking_date": "2026-09-07",
+        "start_time": "09:00",
+        "end_time": "10:00",
+        "number_of_pax": 1,
+        "members": [],
+        "status": "Reserved"
     }
 ]
